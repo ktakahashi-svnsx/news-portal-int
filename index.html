@@ -985,11 +985,11 @@ function renderAudio(media){
   const mbBtn=document.getElementById('mbAudioBtn');
   const mbTxt=document.getElementById('mbAudioTxt');
   if(mbBtn&&mbTxt){
-    if(media&&media.audio_url){mbBtn.classList.add('has-audio');mbTxt.textContent='音声を再生';}
+    if(media&&(media.audio_internal_url||media.audio_url)){mbBtn.classList.add('has-audio');mbTxt.textContent='音声を再生';}
     else{mbBtn.classList.remove('has-audio');mbTxt.textContent='音声なし';}
   }
-  if(!media||!media.audio_url){wrap.innerHTML='<div class="audio-none">この日の音声解説はありません</div>';return;}
-  const rawUrl=media.audio_url;
+  if(!media||!(media.audio_internal_url||media.audio_url)){wrap.innerHTML='<div class="audio-none">この日の音声解説はありません</div>';return;}
+  const rawUrl=media.audio_internal_url||media.audio_url;
   const m=rawUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)||rawUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   const fileId=m?m[1]:null;
   const container=document.createElement('div');
@@ -1086,10 +1086,10 @@ function openAudioModal(){
   const media=window._currentAudioMedia;
   if(!modal||!body)return;
   body.innerHTML='';
-  if(!media||!media.audio_url){
+  if(!media||!(media.audio_internal_url||media.audio_url)){
     body.innerHTML='<div class="audio-modal-none">この日の音声解説はありません</div>';
   }else{
-    const rawUrl=media.audio_url;
+    const rawUrl=media.audio_internal_url||media.audio_url;
     const m=rawUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)||rawUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     const fileId=m?m[1]:null;
     // PC版と同じWeb Audio APIプレイヤーを使用（バッファ済みなら即再生）
