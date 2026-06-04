@@ -822,17 +822,21 @@ async function fetchSheet(name){
 async function loadAll(){
   const errEl=document.getElementById('connErr');
   const okEl=document.getElementById('connOk');
-  // articles
-  try{allRows=parseCSV(await fetchSheet('articles'));}
-  catch(e){
+  // articles / charts / media を並列取得
+  const [articlesResult,chartsResult,mediaResult]=await Promise.allSettled([
+    fetchSheet('articles'),
+    fetchSheet('charts'),
+    fetchSheet('media'),
+  ]);
+  if(articlesResult.status==='fulfilled'){
+    allRows=parseCSV(articlesResult.value);
+  }else{
     allRows=[];
-    errEl.textContent='⚠ '+e.message;
+    errEl.textContent='⚠ '+articlesResult.reason.message;
     errEl.classList.add('on');
   }
-  // charts
-  try{allChartRows=parseCSV(await fetchSheet('charts'));}catch(e){allChartRows=[];}
-  // media
-  try{allMediaRows=parseCSV(await fetchSheet('media'));}catch(e){allMediaRows=[];}
+  allChartRows=chartsResult.status==='fulfilled'?parseCSV(chartsResult.value):[];
+  allMediaRows=mediaResult.status==='fulfilled'?parseCSV(mediaResult.value):[];
 
   // 日付リスト
   const artDates=allRows.map(r=>r.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d));
@@ -1320,14 +1324,17 @@ document.addEventListener('touchend', function(){
   },2500);
 },{passive:true});
 
-// v20260516131202
+// v20260604000000
 (async()=>{
   loadLikedSet();
-  try{ await fetchLikeCounts(); }catch(e){ console.error('fetchLikeCounts error:',e); }
-  try{ await fetchNoteCounts(); }catch(e){ console.error('fetchNoteCounts error:',e); }
-  try{ await fetchDailyLinks(); }catch(e){ console.error('fetchDailyLinks error:',e); }
   initCal();
-  try{ await loadAll(); }catch(e){ console.error('loadAll error:',e); }
+  // 全フェッチを並列実行（fetchLikeCounts / fetchNoteCounts / fetchDailyLinks / loadAll）
+  await Promise.allSettled([
+    fetchLikeCounts().catch(e=>console.error('fetchLikeCounts error:',e)),
+    fetchNoteCounts().catch(e=>console.error('fetchNoteCounts error:',e)),
+    fetchDailyLinks().catch(e=>console.error('fetchDailyLinks error:',e)),
+    loadAll().catch(e=>console.error('loadAll error:',e)),
+  ]);
   // 成功・失敗にかかわらず必ずローディングを非表示
   const ld=document.getElementById('loading');
   ld.classList.add('out');
