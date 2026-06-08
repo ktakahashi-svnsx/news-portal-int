@@ -69,7 +69,9 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
 .pdf-card-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .pdf-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
 .pdf-ico.t{background:#dbeafe}.pdf-ico.p{background:#fce7f3}
+.pdf-ico.c0{background:#fef2f2}.pdf-ico.c1{background:#f5f3ff}.pdf-ico.c2{background:#ecfdf5}.pdf-ico.c3{background:#eff6ff}
 .pdf-name{font-size:10px;color:#374151;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:118px}
+.pdf-name.full{white-space:normal;max-width:none;overflow:visible}
 .pdf-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:6px;background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;font-family:inherit;transition:opacity .15s;text-decoration:none}
 .pdf-btn:hover{opacity:.85}
 .pdf-btn.off{background:#d1d5db;cursor:not-allowed;pointer-events:none}
@@ -187,17 +189,20 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
   .mb-audio-txt{font-size:11px;font-weight:700;color:#6d28d9;line-height:1.3;text-align:center}
   .mb-audio-btn.has-audio .mb-audio-txt{color:#fff}
   .mb-audio-btn.has-audio .mb-audio-ico{filter:brightness(10)}
-  /* 下段：PDFボタン */
-  .mb-pdf-row{display:flex;gap:6px}
+  /* 下段：前月サマリーレポート（4カテゴリ・2×2グリッド） */
+  .mb-pdf-lbl{font-size:10px;font-weight:700;color:#6b7280;padding:0 2px;display:flex;align-items:center;gap:4px}
+  .mb-pdf-row{display:flex;flex-wrap:wrap;gap:6px}
   .mb-pdf-btn{
-    flex:1;display:flex;align-items:center;justify-content:center;gap:4px;
+    flex:1 1 calc(50% - 3px);display:flex;align-items:center;justify-content:center;gap:4px;
     border:none;border-radius:12px;
-    padding:10px 6px;cursor:pointer;min-height:44px;
+    padding:9px 6px;cursor:pointer;min-height:42px;
     font-size:11px;font-weight:700;color:#fff;text-decoration:none;
     -webkit-tap-highlight-color:transparent;
   }
-  .mb-pdf-btn.tech{background:#dc2626}
-  .mb-pdf-btn.pol{background:#2563eb}
+  .mb-pdf-btn.c0{background:#dc2626}
+  .mb-pdf-btn.c1{background:#7c3aed}
+  .mb-pdf-btn.c2{background:#059669}
+  .mb-pdf-btn.c3{background:#2563eb}
   .mb-pdf-btn.off{background:#d1d5db;pointer-events:none;cursor:not-allowed;color:#9ca3af}
   .mb-pdf-btn:not(.off):active{opacity:.8}
   /* カレンダーモーダル */
@@ -407,9 +412,11 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
       </div>
     </div>
     <div>
-      <div class="sb-lbl">📄 PDFダウンロード</div>
-      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico t">📘</div><div class="pdf-name" id="pdfTechName">技術系レポート</div></div><a class="pdf-btn off" id="pdfTechBtn" target="_blank">⬇ ダウンロード</a></div>
-      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico p">📕</div><div class="pdf-name" id="pdfPolName">政治情勢レポートPDF</div></div><a class="pdf-btn off" id="pdfPolBtn" target="_blank">⬇ ダウンロード</a></div>
+      <div class="sb-lbl">📄 前月サマリーレポート<span id="summaryMonthLbl"></span></div>
+      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c0">☀</div><div class="pdf-name full">光学・光アプリケーション</div></div><a class="pdf-btn off" id="sumBtnOptics" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
+      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c1">🛰</div><div class="pdf-name full">宇宙・防衛・核融合</div></div><a class="pdf-btn off" id="sumBtnSpace" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
+      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c2">🏛</div><div class="pdf-name full">国内政治</div></div><a class="pdf-btn off" id="sumBtnDomestic" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
+      <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c3">🌐</div><div class="pdf-name full">海外政治</div></div><a class="pdf-btn off" id="sumBtnIntl" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
     </div>
   </div></aside>
   <main class="main">
@@ -442,7 +449,7 @@ const THEMES=[
   {key:'intl',    label:'海外政治',cls:'t3',kws:['米中','欧州','地政学','輸出規制','外交']},
 ];
 const PAL=['#dc2626','#2563eb','#059669','#f59e0b','#7c3aed','#0891b2'];
-let curDate=null,availDates=[],calY,calM,allRows=[],allChartRows=[],allMediaRows=[];
+let curDate=null,availDates=[],calY,calM,allRows=[],allChartRows=[],allMediaRows=[],allMonthlyRows=[];
 let allDailyLinks={};  // { 'YYYY-MM-DD': {dashboard_url}, ... }
 const CI={};
 
@@ -822,11 +829,12 @@ async function fetchSheet(name){
 async function loadAll(){
   const errEl=document.getElementById('connErr');
   const okEl=document.getElementById('connOk');
-  // articles / charts / media を並列取得
-  const [articlesResult,chartsResult,mediaResult]=await Promise.allSettled([
+  // articles / charts / media / monthly を並列取得
+  const [articlesResult,chartsResult,mediaResult,monthlyResult]=await Promise.allSettled([
     fetchSheet('articles'),
     fetchSheet('charts'),
     fetchSheet('media'),
+    fetchSheet('monthly'),
   ]);
   if(articlesResult.status==='fulfilled'){
     allRows=parseCSV(articlesResult.value);
@@ -837,6 +845,10 @@ async function loadAll(){
   }
   allChartRows=chartsResult.status==='fulfilled'?parseCSV(chartsResult.value):[];
   allMediaRows=mediaResult.status==='fulfilled'?parseCSV(mediaResult.value):[];
+  allMonthlyRows=monthlyResult.status==='fulfilled'?parseMonthlyCSV(monthlyResult.value):[];
+
+  // 前月サマリーレポート（日次データとは独立して一度だけ描画）
+  renderMonthly();
 
   // 日付リスト
   const artDates=allRows.map(r=>r.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d));
@@ -936,7 +948,6 @@ function renderAll(data,media){
   });
   document.getElementById('topicCnt').textContent=total;
   document.getElementById('sideBadge').classList.toggle('on',total>0);
-  renderPDFs(media);
   renderAudio(media);
 }
 function renderKw(i,defs,extra){
@@ -1033,36 +1044,50 @@ function renderCharts(i,theme,data){
     CI[cid]=new Chart(ctx,{type:isBar?'bar':'line',data:{labels:ch.labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!ch.datasets,position:'bottom',labels:{font:{size:10,family:'Noto Sans JP'},padding:12,boxWidth:12}},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#374151',bodyColor:'#374151'}},scales:{x:{grid:{color:'#f3f4f6'},ticks:{color:'#6b7280',font:{size:10}},border:{color:'#e5e7eb'}},y:{grid:{color:'#f3f4f6'},ticks:{color:'#6b7280',font:{size:10}},border:{color:'#e5e7eb'}}}}});
   });
 }
-function renderPDFs(media){
-  // ── PC用サイドバー ──
-  const tBtn=document.getElementById('pdfTechBtn');
-  const pBtn=document.getElementById('pdfPolBtn');
-  const tNm=document.getElementById('pdfTechName');
-  const pNm=document.getElementById('pdfPolName');
-  if(tBtn){tBtn.classList.add('off');tBtn.removeAttribute('href');}
-  if(pBtn){pBtn.classList.add('off');pBtn.removeAttribute('href');}
-  if(tNm)tNm.textContent='技術系レポート';
-  if(pNm)pNm.textContent='政治情勢レポート';
-  // ── スマホ用下部バー ──
-  const mbTech=document.getElementById('mbPdfTech');
-  const mbPol=document.getElementById('mbPdfPol');
-  if(mbTech){mbTech.classList.add('off');mbTech.removeAttribute('href');}
-  if(mbPol){mbPol.classList.add('off');mbPol.removeAttribute('href');}
-  if(!media)return;
-  // 技術系PDF
-  const techUrl=media.pdf_tech_url||'';
-  if(techUrl){
-    if(tBtn){tBtn.classList.remove('off');tBtn.href=techUrl;}
-    if(tNm)tNm.textContent='技術系レポートPDF';
-    if(mbTech){mbTech.classList.remove('off');mbTech.href=techUrl;}
+// ── 前月サマリーレポート（4カテゴリ）──
+// monthly シート想定列: month(YYYY-MM), optics_url, space_url, domestic_url, intl_url
+const SUMMARY_DEFS=[
+  {col:'optics_url',   pc:'sumBtnOptics',   mb:'mbSumOptics'},
+  {col:'space_url',    pc:'sumBtnSpace',    mb:'mbSumSpace'},
+  {col:'domestic_url', pc:'sumBtnDomestic', mb:'mbSumDomestic'},
+  {col:'intl_url',     pc:'sumBtnIntl',     mb:'mbSumIntl'},
+];
+function _prevMonthStr(){
+  const n=new Date();
+  let y=n.getFullYear(),m=n.getMonth()-1; // getMonth()は0始まり → 前月
+  if(m<0){m=11;y-=1;}
+  return `${y}-${String(m+1).padStart(2,'0')}`;
+}
+// 月次サマリー専用CSVパーサ（date列ではなくmonth列でフィルタ）
+function parseMonthlyCSV(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const hdr=csvLine(lines[0]);
+  return lines.slice(1).map(l=>{
+    const f=csvLine(l),o={};
+    hdr.forEach((h,i)=>{o[h]=(f[i]||'').trim();});
+    return o;
+  }).filter(r=>/^\d{4}-\d{2}$/.test(String(r.month||'')));
+}
+function renderMonthly(){
+  // 対象月：前月。該当行が無ければ利用可能な最新月にフォールバック
+  let target=_prevMonthStr();
+  let row=allMonthlyRows.find(r=>String(r.month||'')===target)||null;
+  if(!row){
+    const months=allMonthlyRows.map(r=>String(r.month||'')).filter(m=>/^\d{4}-\d{2}$/.test(m)).sort();
+    if(months.length){target=months[months.length-1];row=allMonthlyRows.find(r=>String(r.month||'')===target)||null;}
   }
-  // 政治系PDF
-  const polUrl=media.pdf_pol_url||'';
-  if(polUrl){
-    if(pBtn){pBtn.classList.remove('off');pBtn.href=polUrl;}
-    if(pNm)pNm.textContent='政治情勢レポートPDF';
-    if(mbPol){mbPol.classList.remove('off');mbPol.href=polUrl;}
-  }
+  const lbl=row?`（${target}）`:'';
+  const pcLbl=document.getElementById('summaryMonthLbl');if(pcLbl)pcLbl.textContent=lbl;
+  const mbLbl=document.getElementById('mbSummaryMonthLbl');if(mbLbl)mbLbl.textContent=lbl;
+  SUMMARY_DEFS.forEach(d=>{
+    const url=row?String(row[d.col]||'').trim():'';
+    [document.getElementById(d.pc),document.getElementById(d.mb)].forEach(el=>{
+      if(!el)return;
+      if(url&&/^https?:\/\//.test(url)){el.classList.remove('off');el.href=url;}
+      else{el.classList.add('off');el.removeAttribute('href');}
+    });
+  });
 }
 
 
@@ -1362,10 +1387,13 @@ document.addEventListener('touchend', function(){
       <span class="mb-audio-txt" id="mbAudioTxt">音声なし</span>
     </button>
   </div>
-  <!-- 下段：PDF2ボタン -->
+  <!-- 下段：前月サマリーレポート（4カテゴリ） -->
+  <div class="mb-pdf-lbl">📄 前月サマリー<span id="mbSummaryMonthLbl"></span></div>
   <div class="mb-pdf-row">
-    <a class="mb-pdf-btn tech off" id="mbPdfTech" target="_blank" rel="noopener">📘 技術系レポートPDF</a>
-    <a class="mb-pdf-btn pol off" id="mbPdfPol" target="_blank" rel="noopener">📕 政治情勢レポートPDF</a>
+    <a class="mb-pdf-btn c0 off" id="mbSumOptics" target="_blank" rel="noopener">☀ 光学</a>
+    <a class="mb-pdf-btn c1 off" id="mbSumSpace" target="_blank" rel="noopener">🛰 宇宙・防衛</a>
+    <a class="mb-pdf-btn c2 off" id="mbSumDomestic" target="_blank" rel="noopener">🏛 国内政治</a>
+    <a class="mb-pdf-btn c3 off" id="mbSumIntl" target="_blank" rel="noopener">🌐 海外政治</a>
   </div>
 </div>
 
