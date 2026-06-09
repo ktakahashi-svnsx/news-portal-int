@@ -756,7 +756,17 @@ async function fetchLikeCounts() {
     const res = await fetch(LIKES_ENDPOINT + '?audience=' + encodeURIComponent(AUDIENCE));
     const j = await res.json();
     if (j.ok) likeCounts = j.data;
+    // loadAll() と並列実行されるため、すでに描画済みのカードがあれば
+    // 取得した数で各グッドボタンを更新する（初回から数が表示される）
+    refreshAllGoodCounts();
   } catch(e) { console.warn('fetchLikeCounts failed:', e); }
+}
+// 表示中の全グッドボタンのいいね数・状態を最新の likeCounts で更新
+function refreshAllGoodCounts() {
+  document.querySelectorAll('.good-btn[data-like-url]').forEach(btn => {
+    const url = btn.getAttribute('data-like-url');
+    _refreshGoodBtn(url, btn);
+  });
 }
 async function toggleLike(url, btn) {
   const wasLiked = likedSet.has(url);
@@ -1375,6 +1385,8 @@ document.addEventListener('touchend', function(){
   ]);
   // 全フェッチ完了後、最新の allDailyLinks でダッシュボードボタンを確定描画
   if (curDate) renderDailyLinks(curDate);
+  // 表示済みカードのいいね数も最新値で確定更新
+  refreshAllGoodCounts();
   // 成功・失敗にかかわらず必ずローディングを非表示
   const ld=document.getElementById('loading');
   ld.classList.add('out');
