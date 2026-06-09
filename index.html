@@ -568,6 +568,9 @@ async function fetchDailyLinks() {
     const res = await fetch(ANALYTICS_ENDPOINT + '?type=daily_links');
     const j = await res.json();
     if (j.ok) allDailyLinks = j.data || {};
+    // loadAll() と並列実行されるため、すでに日付が表示済みなら
+    // 取得したリンクでダッシュボードボタンを再描画する（初回から有効化）
+    if (curDate) renderDailyLinks(curDate);
   } catch(e) { console.warn('fetchDailyLinks failed:', e); }
 }
 
@@ -1360,6 +1363,8 @@ document.addEventListener('touchend', function(){
     fetchDailyLinks().catch(e=>console.error('fetchDailyLinks error:',e)),
     loadAll().catch(e=>console.error('loadAll error:',e)),
   ]);
+  // 全フェッチ完了後、最新の allDailyLinks でダッシュボードボタンを確定描画
+  if (curDate) renderDailyLinks(curDate);
   // 成功・失敗にかかわらず必ずローディングを非表示
   const ld=document.getElementById('loading');
   ld.classList.add('out');
