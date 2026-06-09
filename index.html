@@ -190,6 +190,16 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
   .mb-audio-btn.has-audio .mb-audio-txt{color:#fff}
   .mb-audio-btn.has-audio .mb-audio-ico{filter:brightness(10)}
   /* 下段：前月サマリーレポート（4カテゴリ・2×2グリッド） */
+  /* スクロールダウンで格納するラッパー */
+  .mb-summary{
+    display:flex;flex-direction:column;gap:6px;
+    overflow:hidden;
+    max-height:140px;opacity:1;
+    transition:max-height .28s ease,opacity .18s ease,margin-top .28s ease;
+  }
+  .mobile-bar.mb-collapsed .mb-summary{
+    max-height:0;opacity:0;margin-top:-6px;pointer-events:none;
+  }
   .mb-pdf-lbl{font-size:10px;font-weight:700;color:#6b7280;padding:0 2px;display:flex;align-items:center;gap:4px}
   .mb-pdf-row{display:flex;flex-wrap:wrap;gap:6px}
   .mb-pdf-btn{
@@ -1392,13 +1402,15 @@ document.addEventListener('touchend', function(){
       <span class="mb-audio-txt" id="mbAudioTxt">音声なし</span>
     </button>
   </div>
-  <!-- 下段：前月サマリーレポート（4カテゴリ） -->
-  <div class="mb-pdf-lbl">📄 前月サマリー<span id="mbSummaryMonthLbl"></span></div>
-  <div class="mb-pdf-row">
-    <a class="mb-pdf-btn c0 off" id="mbSumOptics" target="_blank" rel="noopener">☀ 光学</a>
-    <a class="mb-pdf-btn c1 off" id="mbSumSpace" target="_blank" rel="noopener">🛰 宇宙・防衛</a>
-    <a class="mb-pdf-btn c2 off" id="mbSumDomestic" target="_blank" rel="noopener">🏛 国内政治</a>
-    <a class="mb-pdf-btn c3 off" id="mbSumIntl" target="_blank" rel="noopener">🌐 海外政治</a>
+  <!-- 下段：前月サマリーレポート（4カテゴリ）／スクロールで格納 -->
+  <div class="mb-summary" id="mbSummary">
+    <div class="mb-pdf-lbl">📄 前月サマリー<span id="mbSummaryMonthLbl"></span></div>
+    <div class="mb-pdf-row">
+      <a class="mb-pdf-btn c0 off" id="mbSumOptics" target="_blank" rel="noopener">☀ 光学</a>
+      <a class="mb-pdf-btn c1 off" id="mbSumSpace" target="_blank" rel="noopener">🛰 宇宙・防衛</a>
+      <a class="mb-pdf-btn c2 off" id="mbSumDomestic" target="_blank" rel="noopener">🏛 国内政治</a>
+      <a class="mb-pdf-btn c3 off" id="mbSumIntl" target="_blank" rel="noopener">🌐 海外政治</a>
+    </div>
   </div>
 </div>
 
@@ -1458,5 +1470,30 @@ document.addEventListener('touchend', function(){
     </div>
   </div>
 </div>
+<script>
+// ── スクロールでスマホ下部バーの「前月サマリー」を格納/展開 ──
+(function(){
+  const bar = document.getElementById('mobileBar');
+  const scroller = document.querySelector('.main');
+  if(!bar || !scroller) return;
+  let lastY = 0, ticking = false;
+  function update(){
+    const y = scroller.scrollTop;
+    const diff = y - lastY;
+    if(y < 24){                // 最上部付近 → 常に展開
+      bar.classList.remove('mb-collapsed');
+    }else if(diff > 6){        // 下スクロール → 格納
+      bar.classList.add('mb-collapsed');
+    }else if(diff < -6){       // 上スクロール → 展開
+      bar.classList.remove('mb-collapsed');
+    }
+    lastY = y;
+    ticking = false;
+  }
+  scroller.addEventListener('scroll', function(){
+    if(!ticking){ window.requestAnimationFrame(update); ticking = true; }
+  }, {passive:true});
+})();
+</script>
 </body>
 </html>
