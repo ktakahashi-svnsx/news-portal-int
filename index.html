@@ -93,48 +93,99 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
 .tab{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:22px;border:1px solid var(--border);background:var(--white);font-size:12px;font-weight:500;color:#374151;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
 .tab:hover{border-color:var(--red);color:var(--red)}
 .tab.act{color:#fff;border-color:transparent}
-.tab[data-i="0"].act{background:var(--red)}
-.tab[data-i="1"].act{background:var(--purple)}
-.tab[data-i="2"].act{background:var(--green)}
-.tab[data-i="3"].act{background:var(--blue)}
+.tab.t0.act{background:var(--red)}
+.tab.t1.act{background:var(--purple)}
+.tab.t2.act{background:var(--green)}
+.tab.t3.act{background:var(--blue)}
+.tab.t0:hover{border-color:var(--red);color:var(--red)}
+.tab.t1:hover{border-color:var(--purple);color:var(--purple)}
+.tab.t2:hover{border-color:var(--green);color:var(--green)}
+.tab.t3:hover{border-color:var(--blue);color:var(--blue)}
+.tab.t0.act:hover,.tab.t1.act:hover,.tab.t2.act:hover,.tab.t3.act:hover{color:#fff}
 .tab-ico{font-size:13px}
 .tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:9px;font-size:10px;font-weight:700;background:rgba(0,0,0,.12)}
 .tab.act .tab-badge{background:rgba(255,255,255,.28)}
-.panel{display:none}.panel.act{display:block;animation:fin .2s}
+/* ── ジャンル選択フィルタ（サブジャンル・グループ表示） ── */
+.tabs-lbl{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;white-space:nowrap}
+.tabs-lbl::before{content:'▾';font-size:10px}
+.tab{position:relative}
+.tab.sub{padding:6px 12px;font-size:11.5px}
+.tab .tab-check{font-size:11px;font-weight:700;opacity:0;margin-right:-2px;transition:opacity .12s}
+.tab.act .tab-check{opacity:1}
+.tab:not(.act){opacity:.78}
+.tab:not(.act):hover{opacity:1}
+.filter-panel{margin-bottom:14px}
+.filter-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-panel:not(.collapsed) .filter-head{margin-bottom:9px}
+.filter-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:5px 11px;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .12s}
+.filter-toggle:hover{border-color:var(--red);color:var(--red)}
+.filter-toggle .ft-chev{font-size:10px;transition:transform .15s}
+.filter-panel:not(.collapsed) .filter-toggle .ft-chev{transform:rotate(90deg)}
+.filter-summary{font-size:11px;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter-panel:not(.collapsed) .filter-summary{display:none}
+/* 展開時：グループ行を縦積み。為替ダッシュボードは右下に配置 */
+.filter-body{display:flex;flex-direction:column}
+.filter-body .dash-btn{align-self:flex-end;margin-top:2px}
+/* 折りたたみ時：サブチップは隠し、グループ一括ボタン＋為替ボタンを1行で表示 */
+.filter-panel.collapsed .filter-body{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;margin-top:2px}
+.filter-panel.collapsed .chip-group{margin-bottom:0}
+.filter-panel.collapsed .chip-group .chips{display:none}
+.filter-panel.collapsed .grp-toggle{width:auto}
+.filter-panel.collapsed .filter-body .dash-btn{align-self:auto;margin-top:0;margin-left:auto}
+.filter-actions{display:flex;gap:6px;flex-shrink:0}
+.filter-mini{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--white);border:1px solid var(--border);border-radius:12px;padding:3px 10px;cursor:pointer;font-family:inherit;transition:all .12s}
+.filter-mini:hover{border-color:var(--red);color:var(--red)}
+.chip-group{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px}
+.chip-group:last-child{margin-bottom:0}
+/* グループ一括選択ボタン（左側） */
+.grp-toggle{flex-shrink:0;width:118px;text-align:left;font-size:11px;font-weight:700;color:var(--text);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:6px 9px 6px 17px;cursor:pointer;font-family:inherit;position:relative;line-height:1.3;transition:all .12s}
+.grp-toggle::before{content:'';position:absolute;left:8px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:2px;background:var(--muted)}
+.chip-group.cg-optics .grp-toggle::before{background:var(--red)}
+.chip-group.cg-space .grp-toggle::before{background:var(--purple)}
+.chip-group.cg-pol .grp-toggle::before{background:var(--green)}
+.grp-toggle:hover{border-color:#9ca3af}
+.chip-group.cg-optics .grp-toggle.some{background:#fef2f2;border-color:var(--red);color:var(--red)}
+.chip-group.cg-space .grp-toggle.some{background:#f5f3ff;border-color:var(--purple);color:var(--purple)}
+.chip-group.cg-pol .grp-toggle.some{background:#ecfdf5;border-color:var(--green);color:var(--green)}
+.grp-toggle.all{color:#fff;border-color:transparent}
+.chip-group.cg-optics .grp-toggle.all{background:var(--red)}
+.chip-group.cg-space .grp-toggle.all{background:var(--purple)}
+.chip-group.cg-pol .grp-toggle.all{background:var(--green)}
+.grp-toggle.all::before{background:#fff}
+.chip-group .chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+/* ── 統合ニュースグリッド（ジャンル間の余白なしで連続表示） ── */
+#ngAll{animation:fin .2s}
+/* ── 日曜：メインジャンル別ブロック（連続グリッドをやめ、ブロックごとに区切る） ── */
+.wk-flow{animation:fin .2s}
+.wk-block{margin-bottom:28px}
+.wk-block:last-child{margin-bottom:0}
+.wk-block-hd{display:flex;align-items:center;gap:10px;margin:0 0 13px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.wk-block-ttl{font-size:15px;font-weight:700;color:var(--text);position:relative;padding-left:12px;letter-spacing:.01em}
+.wk-block-ttl::before{content:'';position:absolute;left:0;top:2px;bottom:1px;width:3px;border-radius:2px;background:var(--muted)}
+.wk-block.t0 .wk-block-ttl::before{background:var(--red)}
+.wk-block.t1 .wk-block-ttl::before{background:var(--purple)}
+.wk-block.t2 .wk-block-ttl::before{background:var(--green)}
+.wk-block-tag{font-size:11px;font-weight:700;color:#b45309;background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:2px 9px}
+.wk-block .ngrid{margin-bottom:0}
+.charts-flow{margin-top:8px}
+.charts-flow .charts-sec{margin-bottom:16px}
+.charts-flow .charts-sec:last-child{margin-bottom:0}
 @keyframes fin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.kw-bar{background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;overflow:hidden}
-.kw-ico{color:var(--muted);font-size:12px;flex-shrink:0}
-.kw-marquee{flex:1;min-width:0;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%)}
-.kw-track{display:inline-block;white-space:nowrap;will-change:transform;animation:kwScroll 20s linear infinite}
-.kw-bar:hover .kw-track,.kw-bar:active .kw-track{animation-play-state:paused}
-@keyframes kwScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.kw-track{animation:none}}
-.kw-tag{font-size:11px;color:#4b5563;padding:1px 0}
-.kw-tag.lnk{cursor:pointer;color:#374151;transition:color .12s;border-radius:3px;outline:none}
-.kw-tag.lnk:hover,.kw-tag.lnk:focus-visible{color:var(--red);text-decoration:underline;text-underline-offset:2px}
-.kw-tag.lnk:focus-visible{box-shadow:0 0 0 2px rgba(220,38,38,.4)}
-.kw-sep{color:#cbd0d8;padding:0 9px}
-/* ── 週間ランキング（マーキー型 / 直近7日 TOP5） ── */
-.rank-marquee{gap:10px}
-.rank-hd-inline{display:flex;align-items:center;gap:5px;flex-shrink:0;padding-right:10px;border-right:1px solid var(--border)}
-.rank-hd-ico{font-size:13px}
-.rank-hd-ttl{font-size:11px;font-weight:700;color:#b45309;letter-spacing:.02em;white-space:nowrap}
-/* 流れる各ランキング項目 */
-.kw-tag.rank{display:inline-flex;align-items:center;gap:6px;padding:2px 0}
-.rank-no-chip{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;border-radius:50%;font-family:'Oswald',sans-serif;font-size:10px;font-weight:700;color:#9ca3af;background:#eef0f4;flex-shrink:0}
-.kw-tag.rank.top1 .rank-no-chip{background:#fde68a;color:#92400e}
-.kw-tag.rank.top2 .rank-no-chip{background:#e5e7eb;color:#4b5563}
-.kw-tag.rank.top3 .rank-no-chip{background:#fed7aa;color:#9a3412}
-.rank-tag-ttl{font-size:11px;color:#374151;font-weight:500}
-.kw-tag.rank.lnk:hover .rank-tag-ttl,.kw-tag.rank.lnk:focus-visible .rank-tag-ttl{color:var(--red);text-decoration:underline;text-underline-offset:2px}
-.rank-tag-metric{font-size:10px;font-weight:700;color:#f43f5e;white-space:nowrap}
-.rank-tag-metric.note{color:#7c3aed}
-.rank-empty-tag{font-size:11px;color:var(--muted)}
-@media(max-width:700px){
-  .rank-hd-ttl{display:none}
-  .rank-hd-inline{padding-right:7px}
-  .rank-tag-ttl{font-size:11px}
-}
+/* ── 空状態プレースホルダ ── */
+.filter-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.filter-empty-ico{font-size:44px;margin-bottom:12px;opacity:.3}
+/* ── 日曜：週間グッドランキング案内バナー ── */
+.weekly-banner{display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #fcd34d;border-radius:11px;padding:11px 15px;margin-bottom:16px}
+.weekly-banner .wk-ico{font-size:22px;line-height:1;flex-shrink:0}
+.weekly-banner .wk-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.weekly-banner .wk-ttl{font-size:13px;font-weight:700;color:#92400e}
+.weekly-banner .wk-sub{font-size:11px;color:#a16207;line-height:1.5}
+.weekly-banner .wk-range{font-weight:700}
+/* ── 週間ビューのカード内バッジ（順位・グッド数・掲載日） ── */
+.nrank{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:18px;padding:0 5px;border-radius:9px;font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;background:#eef0f4;color:#6b7280;flex-shrink:0}
+.nrank.r1{background:#fde68a;color:#92400e}.nrank.r2{background:#e5e7eb;color:#4b5563}.nrank.r3{background:#fed7aa;color:#9a3412}
+.nlikes{display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#f43f5e;white-space:nowrap}
+.ndate{font-size:10px;color:var(--muted);white-space:nowrap}
 @keyframes ncardFlash{0%{box-shadow:0 0 0 3px rgba(220,38,38,.45)}100%{box-shadow:0 0 0 3px rgba(220,38,38,0)}}
 .ncard.flash{animation:ncardFlash 1.8s ease-out}
 .ngrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
@@ -152,22 +203,20 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
   .hdr-title{font-size:13px}
   .hdr-sub{display:none}
 
-  /* タブをスクロール可能な横並びに */
-  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  /* タブ／サブチップ行をスクロール可能な横並びに */
+  .tabs,.chip-group .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
         padding-bottom:4px;gap:6px;scrollbar-width:none}
-  .tabs::-webkit-scrollbar{display:none}
+  .tabs::-webkit-scrollbar,.chip-group .chips::-webkit-scrollbar{display:none}
   .tab{flex-shrink:0;padding:7px 12px;font-size:12px;white-space:nowrap}
+  .tab.sub{padding:6px 11px;font-size:11px}
+  .chip-group{gap:7px}
+  .grp-toggle{width:96px;font-size:10px;padding:6px 7px 6px 15px}
 
   /* ニュースカードを1列 */
   .ngrid{grid-template-columns:1fr}
   .ncard{border-radius:10px}
   .ntitle{font-size:13px}
   .nbody{font-size:12px;-webkit-line-clamp:3}
-
-  /* 流れるタイトル（ティッカー）：スマホは文字を小さめに */
-  .kw-bar{padding:7px 10px}
-  .kw-tag{font-size:10px;padding:4px 0}
-  .kw-sep{padding:0 7px}
 
   /* カレンダー */
   .cal{width:100%}
@@ -311,10 +360,15 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
 .ncard{background:var(--white);border:1px solid var(--border);border-radius:11px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s,transform .15s}
 .ncard:hover{box-shadow:0 4px 18px rgba(0,0,0,.08);transform:translateY(-2px)}
 .ncard-body{padding:13px;flex:1;display:flex;flex-direction:column}
-.ncard-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.ncard-meta{display:flex;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap}
 .ntag{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
 .ntag.t0{background:#fef2f2;color:var(--red)}.ntag.t1{background:#f5f3ff;color:var(--purple)}.ntag.t2{background:#ecfdf5;color:var(--green)}.ntag.t3{background:#eff6ff;color:var(--blue)}
-.nmedia{font-size:10px;color:var(--muted)}
+.ntag.sub{background:#eef0f4;color:#4b5563}
+/* トピック内に表示するジャンルバッジ（先頭に色付きドット） */
+.ngenre{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap}
+.ngenre::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.ngenre.t0{background:#fef2f2;color:var(--red)}.ngenre.t1{background:#f5f3ff;color:var(--purple)}.ngenre.t2{background:#ecfdf5;color:var(--green)}.ngenre.t3{background:#eff6ff;color:var(--blue)}
+.nmedia{font-size:10px;color:var(--muted);margin-left:auto}
 .ntitle{font-size:13px;font-weight:700;color:var(--text);line-height:1.55;margin-bottom:7px}
 .nbody{font-size:11px;color:#4b5563;line-height:1.8;margin-bottom:8px;flex:1}
 .ninsight{background:#eff6ff;border-left:3px solid var(--blue);border-radius:0 6px 6px 0;padding:7px 9px;margin-bottom:8px;font-size:11px;color:#1e3a8a;line-height:1.7}
@@ -378,7 +432,8 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
 /* ── タブ＋ダッシュボードボタンの行コンテナ（社内用） ── */
 .tabs-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .tabs-row .tabs{margin-bottom:0;flex:1;min-width:0}
-.dash-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:22px;border:1.5px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);font-size:12px;font-weight:600;color:#6d28d9;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;text-decoration:none;box-shadow:0 1px 3px rgba(124,58,237,.15);flex-shrink:0}
+.dash-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);font-size:11px;font-weight:700;color:#6d28d9;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;text-decoration:none;box-shadow:0 1px 2px rgba(124,58,237,.12);flex-shrink:0;max-width:100%}
+.dash-btn .dash-btn-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dash-btn:hover{background:#7c3aed;color:#fff;transform:translateY(-1px);box-shadow:0 3px 8px rgba(124,58,237,.3)}
 .dash-btn-ico{font-size:13px}
 .dash-btn-lbl{line-height:1.1}
@@ -441,35 +496,100 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
     </div>
   </div></aside>
   <main class="main">
-    <div class="tabs-row">
-      <div class="tabs">
-        <button class="tab act" data-i="0"><span class="tab-ico">☀</span>光学・光アプリケーション<span class="tab-badge" id="b0">0</span></button>
-        <button class="tab" data-i="1"><span class="tab-ico">🛰</span>宇宙・防衛・核融合<span class="tab-badge" id="b1">0</span></button>
-        <button class="tab" data-i="2"><span class="tab-ico">🏛</span>国内政治<span class="tab-badge" id="b2">0</span></button>
-        <button class="tab" data-i="3"><span class="tab-ico">🌐</span>海外政治<span class="tab-badge" id="b3">0</span></button>
+    <div class="filter-panel collapsed" id="filterPanel">
+      <div class="filter-head">
+        <button class="filter-toggle" id="filterToggle" type="button" aria-expanded="false" aria-controls="filterBody">
+          <span class="ft-chev">▸</span><span>表示ジャンル</span>
+        </button>
+        <span class="filter-summary" id="filterSummary"></span>
+        <div class="filter-actions">
+          <button class="filter-mini" id="fltAll" type="button">すべて選択</button>
+          <button class="filter-mini" id="fltClear" type="button">すべて解除</button>
+        </div>
       </div>
-      <a class="dash-btn disabled" id="dashBtn" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true" title="ダッシュボード未登録">
-        <span class="dash-btn-ico">📊</span>
-        <span class="dash-btn-lbl">為替動向 / 経済トピック / 税務会計情報 ダッシュボード</span>
-        <span class="dash-btn-ext">↗</span>
-      </a>
+      <div class="filter-body" id="filterBody">
+        <div class="chip-group cg-optics"><button class="grp-toggle" type="button" data-grp="optics" title="光学をまとめて選択／解除">光学</button><div class="chips" id="chips-optics" role="group" aria-label="光学のサブジャンル選択"></div></div>
+        <div class="chip-group cg-space"><button class="grp-toggle" type="button" data-grp="space" title="宇宙・防衛をまとめて選択／解除">宇宙・防衛</button><div class="chips" id="chips-space" role="group" aria-label="宇宙・防衛・核融合のサブジャンル選択"></div></div>
+        <div class="chip-group cg-pol"><button class="grp-toggle" type="button" data-grp="pol" title="政治をまとめて選択／解除">政治</button><div class="chips" id="chips-pol" role="group" aria-label="政治ジャンルの選択"></div></div>
+        <a class="dash-btn disabled" id="dashBtn" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true" title="ダッシュボード未登録">
+          <span class="dash-btn-ico">📊</span>
+          <span class="dash-btn-lbl">為替動向 / 経済トピック / 税務会計情報 ダッシュボード</span>
+          <span class="dash-btn-ext">↗</span>
+        </a>
+      </div>
     </div>
-    <div class="panel act" id="p0"><div class="kw-bar rank-marquee"><div class="rank-hd-inline"><span class="rank-hd-ico">🏆</span><span class="rank-hd-ttl">週間TOP5</span></div><div class="kw-marquee"><div class="kw-track" id="kw0"></div></div></div><div class="ngrid" id="ng0"></div><div class="charts-sec" id="ch0"></div></div>
-    <div class="panel" id="p1"><div class="kw-bar rank-marquee"><div class="rank-hd-inline"><span class="rank-hd-ico">🏆</span><span class="rank-hd-ttl">週間TOP5</span></div><div class="kw-marquee"><div class="kw-track" id="kw1"></div></div></div><div class="ngrid" id="ng1"></div><div class="charts-sec" id="ch1"></div></div>
-    <div class="panel" id="p2"><div class="kw-bar rank-marquee"><div class="rank-hd-inline"><span class="rank-hd-ico">🏆</span><span class="rank-hd-ttl">週間TOP5</span></div><div class="kw-marquee"><div class="kw-track" id="kw2"></div></div></div><div class="ngrid" id="ng2"></div><div class="charts-sec" id="ch2"></div></div>
-    <div class="panel" id="p3"><div class="kw-bar rank-marquee"><div class="rank-hd-inline"><span class="rank-hd-ico">🏆</span><span class="rank-hd-ttl">週間TOP5</span></div><div class="kw-marquee"><div class="kw-track" id="kw3"></div></div></div><div class="ngrid" id="ng3"></div><div class="charts-sec" id="ch3"></div></div>
+    <div class="weekly-banner" id="weeklyBanner" style="display:none">
+      <span class="wk-ico">🏆</span>
+      <div class="wk-txt">
+        <span class="wk-ttl">今週グッドが多かった記事</span>
+        <span class="wk-sub">日曜日は、この1週間（<span class="wk-range"></span>）で反応の多かった記事を、メインジャンル別に上位5件ずつ表示しています。</span>
+      </div>
+    </div>
+    <div class="ngrid" id="ngAll"></div>
+    <div class="charts-flow" id="chAll"></div>
+    <div class="filter-empty" id="filterEmpty" style="display:none"><div class="filter-empty-ico">🗂️</div><div>表示するジャンルが選択されていません。<br>上のタグから見たいジャンルを選択してください。</div></div>
   </main>
 </div>
 <script>
 const SHEET_ID='1D5GDqcSrJj6_SGk3OlnTDqoBL0su03t9Yi5McGTb578';
 const BASE=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 const THEMES=[
-  {key:'optics',  label:'光学',    cls:'t0',kws:['フォトニクス','シリコンフォトニクス','光電融合','LiDAR','CPO']},
-  {key:'space',   label:'宇宙',    cls:'t1',kws:['衛星','防衛','核融合','レーザー','宇宙開発']},
-  {key:'domestic',label:'国内政治',cls:'t2',kws:['国会','閣議','与党','野党','経済安保']},
-  {key:'intl',    label:'海外政治',cls:'t3',kws:['米中','欧州','地政学','輸出規制','外交']},
+  {key:'optics',  label:'光学',    name:'光学・光アプリケーション',cls:'t0',kws:['フォトニクス','シリコンフォトニクス','光電融合','LiDAR','CPO']},
+  {key:'space',   label:'宇宙',    name:'宇宙・防衛・核融合',cls:'t1',kws:['衛星','防衛','核融合','レーザー','宇宙開発']},
+  {key:'domestic',label:'国内政治',name:'国内政治',cls:'t2',kws:['国会','閣議','与党','野党','経済安保']},
+  {key:'intl',    label:'海外政治',name:'海外政治',cls:'t3',kws:['米中','欧州','地政学','輸出規制','外交']},
 ];
 const PAL=['#dc2626','#2563eb','#059669','#f59e0b','#7c3aed','#0891b2'];
+// ── サブジャンル定義（選択単位）。判定元は articles の C列 tag ──
+// parent: optics/space/domestic/intl、cls: 親カラー（t0=光学,t1=宇宙,t2=国内,t3=海外）
+// match: tag に含まれていればそのサブに割り当てる別名。空 tag / 未一致は各親の「その他」へ。
+const VIEWS=[
+  // 光学（t0）
+  {key:'opt_comm',    label:'通信・光電融合',       parent:'optics',cls:'t0',match:['光電融合','光通信','cpo','co-packaged','シリコンフォトニクス','silicon photonics','光トランシーバ','光モジュール','光i/o','wdm','pon','コヒーレント','データセンター']},
+  {key:'opt_laser',   label:'レーザー・光源',       parent:'optics',cls:'t0',match:['レーザー','laser','ファイバレーザー','超短パルス','フェムト秒','ピコ秒','波長可変','tunable','sld','スーパーコンティニューム','supercontinuum','dfb','半導体レーザー','edfa','光源']},
+  {key:'opt_sensing', label:'光計測・光センシング', parent:'optics',cls:'t0',match:['光計測','光センシング','otdr','osa','光スペクトラム','光パワー','分光','spectroscopy','oct','ファイバセンシング','das','dts','分布計測','lidar','ライダー','光ジャイロ','fog','計測','センシング']},
+  {key:'opt_semicon', label:'半導体',               parent:'optics',cls:'t0',match:['半導体','semiconductor','露光','euv','リソグラフィ','ウェハ','ファウンドリ','tsmc','パッケージング','検査装置']},
+  {key:'opt_quantum', label:'量子',                 parent:'optics',cls:'t0',match:['量子','quantum','qkd','量子鍵配送','量子暗号','量子センシング','光量子','もつれ','entangle']},
+  {key:'opt_material',label:'光部品・材料',         parent:'optics',cls:'t0',match:['光部品','材料','プリフォーム','光学結晶','結晶','ニオブ酸リチウム','linbo3','コーティング','反射防止','コネクタ','フェルール','レンズ','ミラー','導波路','受動部品']},
+  {key:'opt_market',  label:'業界・市場動向',       parent:'optics',cls:'t0',match:['業界','市場','m&a','買収','提携','出資','投資','資金調達','ipo','上場','市場規模','予測','シェア','政策','補助金','規制','標準化']},
+  {key:'opt_other',   label:'その他',               parent:'optics',cls:'t0',match:[]},
+  // 宇宙・防衛・核融合（t1）
+  {key:'spc_satellite',label:'衛星・探査',          parent:'space',cls:'t1',match:['衛星','コンステレーション','打ち上げ','ロケット','探査','宇宙機','測位','gnss','地球観測','デブリ']},
+  {key:'spc_optcomm',  label:'光通信',              parent:'space',cls:'t1',match:['光通信','衛星レーザー通信','光衛星通信','宇宙光通信','光通信端末','光地上局','衛星間通信','oisl','レーザー中継']},
+  {key:'spc_defense',  label:'防衛・安全保障',      parent:'space',cls:'t1',match:['防衛','装備','ミサイル','指向性エネルギー','レーザー兵器','hpm','高出力','迎撃','無人機','ドローン','防衛産業','安全保障']},
+  {key:'spc_fusion',   label:'核融合',              parent:'space',cls:'t1',match:['核融合','fusion','慣性閉じ込め','icf','トカマク','ステラレータ','点火','プラズマ','iter']},
+  {key:'spc_policy',   label:'安保政策・予算・規制',parent:'space',cls:'t1',match:['安保政策','防衛費','防衛予算','経済安保','経済安全保障','輸出管理','輸出規制','三文書','制裁']},
+  {key:'spc_other',    label:'その他',              parent:'space',cls:'t1',match:[]},
+  // 政治（サブ分けなし）
+  {key:'domestic',label:'国内政治',parent:'domestic',cls:'t2',match:[]},
+  {key:'intl',    label:'海外政治',parent:'intl',   cls:'t3',match:[]},
+];
+const VIEW_BY_KEY={};VIEWS.forEach(v=>{VIEW_BY_KEY[v.key]=v;});
+const OTHER_KEY={optics:'opt_other',space:'spc_other'};
+// メインジャンル（日曜の週間ランキングの集計単位）。政治は国内＋海外をまとめる
+const MAIN_GENRES=[
+  {key:'optics',label:'光学',              parents:['optics'],           cls:'t0'},
+  {key:'space', label:'宇宙・防衛・核融合',parents:['space'],            cls:'t1'},
+  {key:'pol',   label:'政治',              parents:['domestic','intl'],  cls:'t2'},
+];
+const MAIN_BY_KEY={};MAIN_GENRES.forEach(m=>{MAIN_BY_KEY[m.key]=m;});
+function _mainOf(parent){ return (parent==='domestic'||parent==='intl')?'pol':parent; }
+// section と tag からサブジャンルkeyを判定（optics/space のみ。politicsは親key）
+function _subKey(section,tag){
+  if(section==='domestic')return 'domestic';
+  if(section==='intl')return 'intl';
+  if(section!=='optics'&&section!=='space')return OTHER_KEY.optics;
+  const t=String(tag||'').trim().toLowerCase();
+  const list=VIEWS.filter(v=>v.parent===section&&v.key!==OTHER_KEY[section]);
+  if(t){
+    for(const v of list){ if(t===v.label.toLowerCase()||t===v.key.toLowerCase())return v.key; }
+    // 別名の部分一致は「最長一致（より具体的な語）」を優先
+    let best=null,bestLen=0;
+    for(const v of list){ for(const m of v.match){ if(m&&t.includes(m)&&m.length>bestLen){best=v.key;bestLen=m.length;} } }
+    if(best)return best;
+  }
+  return OTHER_KEY[section];
+}
 let curDate=null,availDates=[],calY,calM,allRows=[],allChartRows=[],allMediaRows=[],allMonthlyRows=[];
 let allDailyLinks={};  // { 'YYYY-MM-DD': {dashboard_url}, ... }
 const CI={};
@@ -924,6 +1044,45 @@ function renderCal(){
 document.getElementById('calPrev').onclick=()=>{calM--;if(calM<0){calM=11;calY--;}renderCal();};
 document.getElementById('calNext').onclick=()=>{calM++;if(calM>11){calM=0;calY++;}renderCal();};
 
+// ── 週の集計ウィンドウ（当日を含む直近7日） ──
+function _dateStr(dt){return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
+function _weekWindow(ds){
+  const end=new Date(ds+'T00:00:00');
+  const start=new Date(end);start.setDate(end.getDate()-6);
+  return {start:_dateStr(start),end:ds};
+}
+function _mmdd(ds){return ds&&ds.length>=10?ds.slice(5).replace('-','/'):'';}
+
+// 日曜日：その週（直近7日）でグッドの多かった記事をジャンル別に集計
+function buildWeeklyData(ds,data){
+  const {start,end}=_weekWindow(ds);
+  allRows.forEach(row=>{
+    if(row.date<start||row.date>end)return;
+    const sec=row.section;if(!data[sec])return;
+    const key=row.url||row.title;
+    const likes=likeCounts[key]||0;
+    data[sec].items.push({tag:row.tag,sourceLabel:row.source_label,title:row.title,detail:row.detail,insight:row.insight,source:row.url,date:row.date,likes});
+  });
+  Object.keys(data).forEach(sec=>{
+    const arr=data[sec].items.filter(it=>it.likes>0);
+    arr.sort((a,b)=> b.likes-a.likes || (b.date>a.date?1:(b.date<a.date?-1:0)));
+    data[sec].items=arr;
+    data[sec].charts=[];   // 週間ビューではチャートは非表示
+  });
+}
+// 週間ビューの案内バナー表示切替
+function setWeeklyBanner(ds,on){
+  const b=document.getElementById('weeklyBanner');
+  if(!b)return;
+  if(on){
+    const {start,end}=_weekWindow(ds);
+    const r=b.querySelector('.wk-range');if(r)r.textContent=`${_mmdd(start)} 〜 ${_mmdd(end)}`;
+    b.style.display='flex';
+  }else{
+    b.style.display='none';
+  }
+}
+
 function loadDate(ds){
   curDate=ds;
   // スマホ用日付ボタンのテキストを更新
@@ -933,247 +1092,179 @@ function loadDate(ds){
     mbDate.textContent=`${parseInt(m)}月${parseInt(d)}日`;
   }renderCal();
   const d=new Date(ds+'T00:00:00');
+  const isSunday=d.getDay()===0;   // 0=日曜
   document.getElementById('sideDate').textContent=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
-  const dayRows=allRows.filter(r=>r.date===ds);
-  const dayCharts=allChartRows.filter(r=>r.date===ds);
   const dayMedia=allMediaRows.find(r=>r.date===ds)||null;
   const data={optics:{items:[],charts:[]},space:{items:[],charts:[]},domestic:{items:[],charts:[]},intl:{items:[],charts:[]}};
-  dayRows.forEach(row=>{
-    const sec=row.section;if(!data[sec])return;
-    data[sec].items.push({tag:row.tag,sourceLabel:row.source_label,title:row.title,detail:row.detail,insight:row.insight,source:row.url});
-  });
-  dayCharts.forEach(row=>{
-    const sec=row.section;if(!data[sec])return;
-    try{
-      const labels=JSON.parse(row.labels_json||'[]');
-      const raw=JSON.parse(row.data_json||'[]');
-      if(Array.isArray(raw)&&raw.length&&typeof raw[0]==='object'){
-        data[sec].charts.push({title:row.title,type:row.type||'bar',dataset_label:row.unit||'',labels,datasets:raw});
-      }else{
-        data[sec].charts.push({title:row.title,type:row.type||'bar',dataset_label:row.unit||'',labels,data:raw});
-      }
-    }catch(e){}
-  });
-  renderAll(data,dayMedia);
+
+  if(isSunday){
+    // 日曜：その週のグッドが多かった記事を表示
+    buildWeeklyData(ds,data);
+    setWeeklyBanner(ds,true);
+  }else{
+    // 平日：その日のニュースを表示
+    const dayRows=allRows.filter(r=>r.date===ds);
+    const dayCharts=allChartRows.filter(r=>r.date===ds);
+    dayRows.forEach(row=>{
+      const sec=row.section;if(!data[sec])return;
+      data[sec].items.push({tag:row.tag,sourceLabel:row.source_label,title:row.title,detail:row.detail,insight:row.insight,source:row.url});
+    });
+    dayCharts.forEach(row=>{
+      const sec=row.section;if(!data[sec])return;
+      try{
+        const labels=JSON.parse(row.labels_json||'[]');
+        const raw=JSON.parse(row.data_json||'[]');
+        if(Array.isArray(raw)&&raw.length&&typeof raw[0]==='object'){
+          data[sec].charts.push({title:row.title,type:row.type||'bar',dataset_label:row.unit||'',labels,datasets:raw});
+        }else{
+          data[sec].charts.push({title:row.title,type:row.type||'bar',dataset_label:row.unit||'',labels,data:raw});
+        }
+      }catch(e){}
+    });
+    setWeeklyBanner(ds,false);
+  }
+  renderAll(data,dayMedia,isSunday);
   renderDailyLinks(ds);
 }
 
-function renderAll(data,media){
-  let total=0;
-  THEMES.forEach((t,i)=>{
-    const d=data[t.key],cnt=d?.items?.length||0;total+=cnt;
-    document.getElementById(`b${i}`).textContent=cnt;
-    renderNews(i,t,d);
-    renderCharts(i,t,d);
+let _curData=null,_curWeekly=false;
+// data(section別) から view(サブジャンル)別の件数を集計
+function _computeViewCounts(data){
+  const c={};VIEWS.forEach(v=>c[v.key]=0);
+  ['optics','space'].forEach(p=>{
+    (data[p]?.items||[]).forEach(it=>{const k=_subKey(p,it.tag);if(c[k]!=null)c[k]++;});
   });
+  c['domestic']=data.domestic?.items?.length||0;
+  c['intl']=data.intl?.items?.length||0;
+  return c;
+}
+function renderAll(data,media,weekly){
+  _curData=data;_curWeekly=!!weekly;
+  let total=0;
+  ['optics','space','domestic','intl'].forEach(k=>{total+=data[k]?.items?.length||0;});
   document.getElementById('topicCnt').textContent=total;
   document.getElementById('sideBadge').classList.toggle('on',total>0);
   renderAudio(media);
-  renderRankings();   // マーキー（流れる週間TOP5）を構築
+  renderFlow();
 }
-function renderKw(i,defs,extra){
-  const track=document.getElementById(`kw${i}`);
-  if(!track)return;
-  track._kwList=(extra?.length?extra:defs)||[];
-  buildMarquee(track);
+
+// 1枚のニュースカードDOMを生成（週間ビューでは順位・グッド数・掲載日を付与）
+// view: サブジャンル定義（label/cls）。カードにサブジャンル名を表示。
+function buildNewsCard(view,item,idx,weekly){
+  const genreName=view.label;
+  const card=document.createElement('div');card.className='ncard';card.id='art-'+view.key+'-'+idx;
+  const ins=item.insight?`<div class="ninsight">${item.insight}</div>`:'';
+  const url=item.source?`<div class="nurl"><a href="${item.source}" target="_blank" rel="noopener">${item.source.length>55?item.source.slice(0,55)+'…':item.source}</a></div>`:'';
+  const articleKey=item.source||item.title;
+  const goodFoot=buildGoodFooter(articleKey);
+  const noteFoot=buildNoteFooter(articleKey);
+  const foot=`<div class="ncard-foot">${noteFoot}${goodFoot.replace('<div class="ncard-foot">','').replace('</div>','')}</div>`;
+  // tag はサブジャンル判定に使うため、ラベルと重複しなければ補助タグとして表示
+  const subTag=(item.tag && item.tag!==genreName)?`<span class="ntag sub">${item.tag}</span>`:'';
+  let weeklyMeta='';
+  if(weekly){
+    const rc=idx===0?'r1':idx===1?'r2':idx===2?'r3':'';
+    const dstr=item.date?_mmdd(item.date):'';
+    weeklyMeta=`<span class="nrank ${rc}">${idx+1}</span><span class="nlikes">❤️ ${item.likes}</span>`+(dstr?`<span class="ndate">${dstr}</span>`:'');
+  }
+  card.innerHTML=`<div class="ncard-body"><div class="ncard-meta">${weeklyMeta}<span class="ngenre ${view.cls}">${genreName}</span>${subTag}<span class="nmedia">${item.sourceLabel||''}</span></div><div class="ntitle">${item.title}</div><div class="nbody">${item.detail}</div>${ins}${url}</div>${foot}`;
+  return card;
 }
-// タイトルを右→左へ途切れなく流すマーキーを構築
-function buildMarquee(track){
-  if(!track)return;
-  const list=track._kwList||[];
-  track.style.animation='none';
-  track.innerHTML='';
-  if(!list.length)return;
-  // スマホ表示では流れるタイトルを20文字までに省略（全文はタップでカード表示）
-  const isMobile=window.matchMedia('(max-width:700px)').matches;
-  const MAXLEN=20;
-  const shorten=t=>{
-    t=t||'';
-    return (isMobile && [...t].length>MAXLEN) ? [...t].slice(0,MAXLEN).join('')+'…' : t;
-  };
-  // 1セット分（末尾に区切り「・」を付けて連結時も等間隔に）
-  const buildUnit=()=>{
-    const f=document.createDocumentFragment();
-    list.forEach(k=>{
-      const isObj=k&&typeof k==='object';
-      // ── ランキング項目（週間TOP5）──
-      if(isObj && k.kind==='rank'){
-        const sp=document.createElement('span');
-        sp.className='kw-tag rank';
-        if(k.isEmpty){
-          sp.classList.add('empty');
-          const em=document.createElement('span');
-          em.className='rank-empty-tag';
-          em.textContent=k.title||'まだ反応がありません';
-          sp.appendChild(em);
-          f.appendChild(sp);
-          const s0=document.createElement('span');s0.className='kw-sep';s0.textContent='・';f.appendChild(s0);
-          return;
-        }
-        if(k.rankNo===1)sp.classList.add('top1');
-        else if(k.rankNo===2)sp.classList.add('top2');
-        else if(k.rankNo===3)sp.classList.add('top3');
-        // 順位チップ
-        const chip=document.createElement('span');
-        chip.className='rank-no-chip';
-        chip.textContent=String(k.rankNo);
-        sp.appendChild(chip);
-        // タイトル
-        const tt=document.createElement('span');
-        tt.className='rank-tag-ttl';
-        tt.textContent=shorten(k.title);
-        sp.appendChild(tt);
-        // メトリクス（グッド／メモ）
-        if(k.likes>0){
-          const ml=document.createElement('span');
-          ml.className='rank-tag-metric';
-          ml.textContent='❤️'+k.likes;
-          sp.appendChild(ml);
-        }
-        if(k.notes>0){
-          const mn=document.createElement('span');
-          mn.className='rank-tag-metric note';
-          mn.textContent='💬'+k.notes;
-          sp.appendChild(mn);
-        }
-        // サイト内記事へジャンプ（別日付なら自動で日付読み込み）
-        if(k.art){
-          sp.classList.add('lnk');
-          sp.dataset.art=k.art;
-          if(k.date)sp.dataset.date=k.date;
-          if(k.title)sp.setAttribute('title',k.title);
-          sp.setAttribute('role','link');
-          sp.setAttribute('tabindex','0');
-        }
-        f.appendChild(sp);
-        const s=document.createElement('span');s.className='kw-sep';s.textContent='・';f.appendChild(s);
-        return;
-      }
-      // ── 従来のキーワード／タイトル項目（フォールバック）──
-      const full=isObj?k.title:k;
-      const sp=document.createElement('span');
-      sp.className='kw-tag';
-      sp.textContent=shorten(full);
-      if(isObj&&k.art){              // クリックで該当記事へジャンプ
-        sp.classList.add('lnk');
-        sp.dataset.art=k.art;
-        if(k.url)sp.dataset.url=k.url;
-        if(k.date)sp.dataset.date=k.date;
-        if(full)sp.setAttribute('title',full);   // 省略時も全文をツールチップ表示
-        sp.setAttribute('role','link');
-        sp.setAttribute('tabindex','0');
-      }
-      f.appendChild(sp);
-      const s=document.createElement('span');s.className='kw-sep';s.textContent='・';f.appendChild(s);
+
+// 選択したサブジャンルの順番で、単一グリッドに連続表示（ジャンル間の余白なし）
+function renderFlow(){
+  const grid=document.getElementById('ngAll');
+  const chWrap=document.getElementById('chAll');
+  const empty=document.getElementById('filterEmpty');
+  if(!grid||!chWrap)return;
+  Object.keys(CI).forEach(k=>{try{CI[k].destroy();}catch(e){}delete CI[k];});
+  grid.innerHTML='';chWrap.innerHTML='';
+  const data=_curData||{};
+  updateChipCounts(_computeViewCounts(data));
+  _refreshFilterUI();
+  if(!selectedViews.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  if(_curWeekly){
+    // 日曜：メインジャンルごとにブロック分割し、各ジャンル上位5件を表示
+    renderWeeklyBlocks(grid,data);
+    return;
+  }
+  grid.className='ngrid';
+  let cardCount=0;
+  // 平日：選択順に、各サブジャンルの記事を1グリッドへ連続で流し込む
+  selectedViews.forEach(key=>{
+    const view=VIEW_BY_KEY[key];if(!view)return;
+    const p=view.parent;
+    let items;
+    if(p==='domestic'||p==='intl') items=(data[p]?.items||[]);
+    else items=(data[p]?.items||[]).filter(it=>_subKey(p,it.tag)===key);
+    items.forEach((item,j)=>{grid.appendChild(buildNewsCard(view,item,j,false));cardCount++;});
+  });
+  if(cardCount===0){
+    grid.innerHTML=`<div class="no-news"><div class="no-news-ico">📭</div><div>選択した項目のニュースはこの日ありません</div></div>`;
+  }
+  // チャート：平日は選択された親ジャンルのチャートを選択順にまとめて表示
+  {
+    const doneParents={};
+    selectedViews.forEach(key=>{
+      const view=VIEW_BY_KEY[key];if(!view)return;
+      const p=view.parent;if(doneParents[p])return;doneParents[p]=1;
+      const theme=THEMES.find(t=>t.key===p);
+      const charts=data[p]?.charts||[];
+      if(theme&&charts.length)renderChartsInto(chWrap,theme,charts);
     });
-    return f;
-  };
-  // 表示幅を測り、ビューポートを満たすだけ繰り返す（途切れ防止）
-  const vp=track.parentElement;                       // .kw-marquee
-  const vw=vp?vp.clientWidth:0;
-  track.appendChild(buildUnit());
-  const unitW=track.scrollWidth;
-  let reps=1;
-  if(vw>0&&unitW>0){ while(unitW*reps<vw+60&&reps<60)reps++; }
-  // 1ブロック = reps回分。それを2ブロック並べ、-50%移動でシームレスにループ
-  track.innerHTML='';
-  for(let b=0;b<2;b++){ for(let r=0;r<reps;r++){ track.appendChild(buildUnit()); } }
-  // 速度を内容量に比例させ一定の流速（約55px/秒）に
-  const half=track.scrollWidth/2;
-  if(half>0){
-    track.style.animation='';
-    track.style.animationDuration=Math.max(10,half/55)+'s';
   }
 }
-function renderNews(i,theme,data){
-  const grid=document.getElementById(`ng${i}`);grid.innerHTML='';
-  const items=data?.items||[];
-  if(!items.length){grid.innerHTML=`<div class="no-news"><div class="no-news-ico">📭</div><div>この日のニュースはありません</div></div>`;return;}
-  items.forEach((item,idx)=>{
-    const card=document.createElement('div');card.className='ncard';card.id='art-'+i+'-'+idx;
-    const ins=item.insight?`<div class="ninsight">${item.insight}</div>`:'';
-    const url=item.source?`<div class="nurl"><a href="${item.source}" target="_blank" rel="noopener">${item.source.length>55?item.source.slice(0,55)+'…':item.source}</a></div>`:'';
-    const articleKey = item.source || item.title;
-    const goodFoot = buildGoodFooter(articleKey);
-    const noteFoot = buildNoteFooter(articleKey);
-    // 社内用は good + note を並べる
-    const foot = `<div class="ncard-foot">${noteFoot}${goodFoot.replace('<div class="ncard-foot">','').replace('</div>','')}</div>`;
-    card.innerHTML=`<div class="ncard-body"><div class="ncard-meta"><span class="ntag ${theme.cls}">${item.tag||theme.label}</span><span class="nmedia">${item.sourceLabel||''}</span></div><div class="ntitle">${item.title}</div><div class="nbody">${item.detail}</div>${ins}${url}</div>${foot}`;
-    grid.appendChild(card);
+
+// 日曜の週間ランキング：メインジャンル（光学／宇宙・防衛／政治）ごとに
+// ブロックを分けて表示。各ブロックはグッド数上位5件。
+function renderWeeklyBlocks(grid,data){
+  grid.className='wk-flow';
+  data=data||{};
+  const WEEKLY_TOP_N=5;
+  // 表示するメインジャンルを、選択されたサブジャンルの登場順で決定
+  const order=[];
+  selectedViews.forEach(k=>{
+    const v=VIEW_BY_KEY[k];if(!v)return;
+    const mg=_mainOf(v.parent);
+    if(order.indexOf(mg)<0)order.push(mg);
   });
-}
-
-// ── 週間ランキング（直近7日・グッド数→メモ数でTOP5）──
-// likeCounts / _noteCountsCache はいずれも記事URL（無ければタイトル）をキーに持つ。
-// renderNews と同じ articleKey ロジック（item.source || item.title）で突き合わせる。
-const RANK_WINDOW_DAYS = 7;   // 集計対象期間
-const RANK_TOP_N = 5;         // 表示件数
-function _rankKey(r){ return r.url || r.title; }
-function _escAttr(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
-function _escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-// curDate（未設定なら最新日）から遡って、データのある直近 N 日を返す
-function _recentWindowDates(){
-  const base = curDate || (availDates.length ? availDates[availDates.length-1] : '');
-  if(!base) return [];
-  const within = availDates.filter(d => d <= base);
-  return within.slice(-RANK_WINDOW_DAYS);
-}
-function renderRankings(){
-  const winDates = _recentWindowDates();
-  const winSet = new Set(winDates);
-  THEMES.forEach((t,i)=>{
-    const track = document.getElementById('kw'+i);
-    if(!track) return;
-    // 対象セクション × 直近7日 の記事を集計（同一URLは最大スコアの1件に集約）
-    const seen = {};
-    allRows.forEach(r=>{
-      if(r.section !== t.key) return;
-      if(!winSet.has(r.date)) return;
-      const key = _rankKey(r);
-      if(!key) return;
-      const likes = likeCounts[key] || 0;
-      const notes = (typeof _noteCountsCache!=='undefined' ? (_noteCountsCache[key]||0) : 0);
-      const score = likes*100 + notes;   // グッド優先、メモはタイブレーク
-      if(!seen[key] || score > seen[key].score){
-        seen[key] = {title:r.title, url:r.url, date:r.date, section:r.section, likes, notes, score};
-      }
-    });
-    const ranked = Object.values(seen)
-      .filter(o => o.likes>0 || o.notes>0)   // 反応ゼロの記事は除外
-      .sort((a,b)=> b.score - a.score || (b.date>a.date?1:-1))
-      .slice(0, RANK_TOP_N);
-
-    let list;
-    if(!ranked.length){
-      list = [{kind:'rank', isEmpty:true, title:'まだ反応がありません（グッド・メモが付くとランキングに表示されます）'}];
-    }else{
-      list = ranked.map((o,idx)=>{
-        // その記事カードのサイト内ID（art-{タブ}-{日付内の並び順}）を算出
-        const sameDay = allRows.filter(r=>r.date===o.date && r.section===o.section);
-        let cardIdx = sameDay.findIndex(r=>_rankKey(r)===_rankKey(o));
-        if(cardIdx<0) cardIdx = 0;
-        return {
-          kind:'rank', rankNo:idx+1, title:o.title,
-          art:'art-'+i+'-'+cardIdx, date:o.date,
-          likes:o.likes, notes:o.notes
-        };
+  order.forEach(mgKey=>{
+    const mg=MAIN_BY_KEY[mgKey];if(!mg)return;
+    // メインジャンル内の記事を全サブから集約し、グッド数→日付で降順ソート
+    let recs=[];
+    mg.parents.forEach(p=>{ (data[p]?.items||[]).forEach(it=>recs.push({it,p})); });
+    recs.sort((a,b)=> (b.it.likes||0)-(a.it.likes||0) || ((b.it.date>a.it.date)?1:(b.it.date<a.it.date?-1:0)));
+    recs=recs.slice(0,WEEKLY_TOP_N);
+    const block=document.createElement('div');block.className='wk-block '+mg.cls;
+    const hd=document.createElement('div');hd.className='wk-block-hd';
+    hd.innerHTML=`<span class="wk-block-ttl">${mg.label}</span><span class="wk-block-tag">週間TOP5</span>`;
+    block.appendChild(hd);
+    const g=document.createElement('div');g.className='ngrid';
+    if(recs.length){
+      recs.forEach((rec,j)=>{
+        const view=VIEW_BY_KEY[_subKey(rec.p,rec.it.tag)]||{key:mg.key,label:mg.label,cls:mg.cls};
+        g.appendChild(buildNewsCard(view,rec.it,j,true));
       });
+    }else{
+      g.innerHTML=`<div class="no-news"><div class="no-news-ico">📭</div><div>${mg.label}：今週グッドが付いた記事はまだありません</div></div>`;
     }
-    track._kwList = list;
-    buildMarquee(track);
+    block.appendChild(g);
+    grid.appendChild(block);
   });
 }
 
-function renderCharts(i,theme,data){
-  const wrap=document.getElementById(`ch${i}`);wrap.innerHTML='';
-  const charts=data?.charts||[];if(!charts.length)return;
-  const hd=document.createElement('div');hd.className='charts-hd';hd.textContent='市場予測・データチャート';wrap.appendChild(hd);
+// 共有チャート領域へ、ジャンル名付きヘッダーでチャート群を追加
+function renderChartsInto(container,theme,charts){
+  const genreName=theme.name||theme.label;
+  const sec=document.createElement('div');sec.className='charts-sec';
+  const hd=document.createElement('div');hd.className='charts-hd';hd.textContent=`市場予測・データチャート（${genreName}）`;sec.appendChild(hd);
   charts.forEach(ch=>{
     const card=document.createElement('div');card.className='chart-card';
     const cid='c_'+Math.random().toString(36).slice(2);
     card.innerHTML=`<div class="chart-card-ttl">${ch.title}</div><div class="chart-card-sub">単位：${ch.dataset_label||''}</div><div class="chart-wrap"><canvas id="${cid}"></canvas></div>`;
-    wrap.appendChild(card);
-    const ctx=document.getElementById(cid).getContext('2d');
+    sec.appendChild(card);
+    const ctx=card.querySelector('canvas').getContext('2d');
     if(CI[cid])CI[cid].destroy();
     const isBar=ch.type==='bar';
     const ds=ch.datasets
@@ -1181,7 +1272,9 @@ function renderCharts(i,theme,data){
       :[{label:ch.dataset_label||'',data:ch.data||[],borderColor:PAL[0],backgroundColor:PAL[0]+(isBar?'55':'18'),borderWidth:2,tension:0.4,fill:!isBar,pointRadius:3,pointBackgroundColor:PAL[0]}];
     CI[cid]=new Chart(ctx,{type:isBar?'bar':'line',data:{labels:ch.labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!ch.datasets,position:'bottom',labels:{font:{size:10,family:'Noto Sans JP'},padding:12,boxWidth:12}},tooltip:{backgroundColor:'#fff',borderColor:'#e5e7eb',borderWidth:1,titleColor:'#374151',bodyColor:'#374151'}},scales:{x:{grid:{color:'#f3f4f6'},ticks:{color:'#6b7280',font:{size:10}},border:{color:'#e5e7eb'}},y:{grid:{color:'#f3f4f6'},ticks:{color:'#6b7280',font:{size:10}},border:{color:'#e5e7eb'}}}}});
   });
+  container.appendChild(sec);
 }
+
 // ── 前月サマリーレポート（4カテゴリ）──
 // monthly シート想定列: month(YYYY-MM), optics_url, space_url, domestic_url, intl_url
 const SUMMARY_DEFS=[
@@ -1401,31 +1494,140 @@ function closeAudioModal(e){
   document.body.style.overflow='';
   // モーダルを閉じても再生は継続（_waは共有）
 }
-// ── タブ切替 ────────────────────────────────────────────
-function switchTab(idx){
-  document.querySelectorAll('.tab').forEach(function(t){
-    t.classList.toggle('act', Number(t.dataset.i) === idx);
-  });
-  document.querySelectorAll('.panel').forEach(function(p,i){
-    p.classList.toggle('act', i === idx);
-  });
-  // 非表示だったパネルは幅が測れないため、表示時に再構築して途切れを防ぐ
-  const tr=document.getElementById('kw'+idx);
-  if(tr)buildMarquee(tr);
+// ── サブジャンル表示フィルタ（複数選択・選択順を保持） ──────────────
+// 各サブジャンル（光学7＋その他 / 宇宙5＋その他 / 国内政治 / 海外政治）を選択単位とし、
+// 選択した順番で連続表示する。選択（順序含む）はブラウザに保存して次回訪問でも維持。
+const GENRE_PREF_KEY = 'newsPortalSubPref_v3';
+let selectedViews = VIEWS.map(v=>v.key);   // 既定：全項目を既定順で表示
+function _loadGenrePref(){
+  try{
+    const raw=localStorage.getItem(GENRE_PREF_KEY);
+    if(!raw)return null;
+    const arr=JSON.parse(raw);
+    if(!Array.isArray(arr))return null;
+    const seen={},out=[];
+    arr.forEach(function(k){ if(VIEW_BY_KEY[k]&&!seen[k]){seen[k]=1;out.push(k);} });
+    return out;
+  }catch(e){ return null; }
 }
-// ウィンドウ幅の変化に追従してマーキーを再計算
-let _kwResizeTmr;
-window.addEventListener('resize',function(){
-  clearTimeout(_kwResizeTmr);
-  _kwResizeTmr=setTimeout(function(){
-    document.querySelectorAll('.panel.act .kw-track').forEach(buildMarquee);
-  },200);
-});
-document.querySelectorAll('.tab').forEach(function(t){
-  t.addEventListener('click', function(){
-    switchTab(Number(t.dataset.i));
+function _saveGenrePref(){
+  try{ localStorage.setItem(GENRE_PREF_KEY, JSON.stringify(selectedViews)); }catch(e){}
+}
+// チップ生成（グループ別コンテナへ）
+function renderChips(){
+  const cont={optics:document.getElementById('chips-optics'),space:document.getElementById('chips-space'),pol:document.getElementById('chips-pol')};
+  if(!cont.optics||!cont.space||!cont.pol)return;
+  cont.optics.innerHTML='';cont.space.innerHTML='';cont.pol.innerHTML='';
+  VIEWS.forEach(function(v){
+    const on=selectedViews.indexOf(v.key)>=0;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='tab sub '+v.cls+(on?' act':'');
+    btn.dataset.key=v.key;
+    btn.setAttribute('aria-pressed',on?'true':'false');
+    btn.innerHTML='<span class="tab-check">✓</span>'+v.label+'<span class="tab-badge" id="cnt_'+v.key+'">0</span>';
+    btn.addEventListener('click',function(){toggleView(v.key);});
+    const target=(v.parent==='optics')?cont.optics:(v.parent==='space')?cont.space:cont.pol;
+    target.appendChild(btn);
   });
-});
+}
+// チップの選択状態を selectedViews に同期
+function _syncChips(){
+  document.querySelectorAll('.tab.sub').forEach(function(t){
+    const on=selectedViews.indexOf(t.dataset.key)>=0;
+    t.classList.toggle('act',on);
+    t.setAttribute('aria-pressed',on?'true':'false');
+  });
+}
+// チップの件数バッジを更新
+function updateChipCounts(counts){
+  VIEWS.forEach(function(v){
+    const el=document.getElementById('cnt_'+v.key);
+    if(el)el.textContent=counts[v.key]||0;
+  });
+}
+function toggleView(key){
+  if(!VIEW_BY_KEY[key])return;
+  const pos=selectedViews.indexOf(key);
+  if(pos>=0) selectedViews.splice(pos,1);   // 解除
+  else       selectedViews.push(key);        // 選択（末尾に追加＝選択順）
+  _saveGenrePref();
+  renderFlow();   // UI同期（チップ/グループ/サマリ）＋再描画はrenderFlowで一括
+}
+function _setAllViews(on){
+  selectedViews = on ? VIEWS.map(v=>v.key) : [];
+  _saveGenrePref();
+  renderFlow();
+}
+// グループ（光学 / 宇宙・防衛 / 政治）をまとめて選択・解除
+const GROUP_PARENTS={optics:['optics'],space:['space'],pol:['domestic','intl']};
+function _groupKeys(grp){
+  const ps=GROUP_PARENTS[grp]||[];
+  return VIEWS.filter(v=>ps.includes(v.parent)).map(v=>v.key);
+}
+function toggleGroup(grp){
+  const keys=_groupKeys(grp);if(!keys.length)return;
+  const allOn=keys.every(k=>selectedViews.indexOf(k)>=0);
+  if(allOn){
+    selectedViews=selectedViews.filter(k=>keys.indexOf(k)<0);   // 全解除
+  }else{
+    keys.forEach(function(k){ if(selectedViews.indexOf(k)<0)selectedViews.push(k); }); // 不足分を選択順に追加
+  }
+  _saveGenrePref();
+  renderFlow();
+}
+// グループボタンの状態（all/some/none）を反映
+function _syncGroupToggles(){
+  document.querySelectorAll('.grp-toggle').forEach(function(b){
+    const keys=_groupKeys(b.dataset.grp);
+    const on=keys.filter(k=>selectedViews.indexOf(k)>=0).length;
+    b.classList.toggle('all', on===keys.length && keys.length>0);
+    b.classList.toggle('some', on>0 && on<keys.length);
+    b.setAttribute('aria-pressed', on>0?'true':'false');
+  });
+}
+// 折りたたみ時のサマリ文言を更新
+function _updateFilterSummary(){
+  const el=document.getElementById('filterSummary');if(!el)return;
+  const n=selectedViews.length, total=VIEWS.length;
+  let txt;
+  if(n===0) txt='表示ジャンル未選択（タップして選択）';
+  else if(n===total) txt='すべての項目を表示中';
+  else txt=`${n} / ${total} 項目を表示中`;
+  el.textContent=txt;
+}
+// チップ生成・件数以外のフィルタUIをまとめて同期（renderFlowから呼ぶ）
+function _refreshFilterUI(){ _syncChips();_syncGroupToggles();_updateFilterSummary(); }
+// 初期化：保存済みの選択があれば順序ごと復元、チップ生成
+(function initGenreFilter(){
+  const pref=_loadGenrePref();
+  if(pref) selectedViews=pref;
+  renderChips();
+})();
+{
+  const a=document.getElementById('fltAll'),c=document.getElementById('fltClear');
+  if(a)a.addEventListener('click',function(){_setAllViews(true);});
+  if(c)c.addEventListener('click',function(){_setAllViews(false);});
+  document.querySelectorAll('.grp-toggle').forEach(function(b){
+    b.addEventListener('click',function(){toggleGroup(b.dataset.grp);});
+  });
+  // 折りたたみ（格納）トグル。状態はブラウザに保存（既定＝格納）
+  const FILTER_COLLAPSE_KEY='newsPortalFilterCollapsed_v1';
+  const panel=document.getElementById('filterPanel'),ft=document.getElementById('filterToggle');
+  function _applyCollapse(collapsed){
+    if(!panel)return;
+    panel.classList.toggle('collapsed', collapsed);
+    if(ft)ft.setAttribute('aria-expanded', collapsed?'false':'true');
+  }
+  let collapsed=true;
+  try{ const s=localStorage.getItem(FILTER_COLLAPSE_KEY); if(s==='0')collapsed=false; }catch(e){}
+  _applyCollapse(collapsed);
+  if(ft)ft.addEventListener('click',function(){
+    collapsed=!panel.classList.contains('collapsed');
+    _applyCollapse(collapsed);
+    try{ localStorage.setItem(FILTER_COLLAPSE_KEY, collapsed?'1':'0'); }catch(e){}
+  });
+}
 
 // グッドボタン イベント委譲（data-like-url属性を使用）
 document.addEventListener('click', function(e) {
@@ -1443,57 +1645,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// 流れるタイトル／ランキングのクリックで該当記事カードへスクロール＆ハイライト
-// 別日付の記事なら、その日付を読み込んでからジャンプする
-function jumpToArticle(artId, targetDate){
-  // 別日付が指定されていて、現在表示中の日付と異なる場合は先に日付を切り替える
-  if(targetDate && targetDate!==curDate && availDates.includes(targetDate)){
-    loadDate(targetDate);   // 当該日の記事カードを再描画
-  }
-  // 日付切替後はカードが再生成されるため、レイアウト確定を待ってから取得
-  requestAnimationFrame(function(){
-    const card=document.getElementById(artId);
-    if(!card)return;
-    const panel=card.closest('.panel');
-    if(panel&&!panel.classList.contains('act')){
-      const idx=Number(panel.id.replace('p',''));
-      if(!isNaN(idx))switchTab(idx);
-    }
-    requestAnimationFrame(function(){
-      card.scrollIntoView({behavior:'smooth',block:'center'});
-      card.classList.remove('flash');void card.offsetWidth;card.classList.add('flash');
-      setTimeout(function(){card.classList.remove('flash');},1800);
-    });
-  });
-}
-document.addEventListener('click', function(e){
-  const tag=e.target.closest('.kw-tag.lnk[data-art]');
-  if(!tag)return;
-  jumpToArticle(tag.getAttribute('data-art'), tag.getAttribute('data-date'));
-});
-document.addEventListener('keydown', function(e){
-  if(e.key!=='Enter'&&e.key!==' ')return;
-  const tag=e.target.closest&&e.target.closest('.kw-tag.lnk[data-art]');
-  if(!tag)return;
-  e.preventDefault();
-  jumpToArticle(tag.getAttribute('data-art'), tag.getAttribute('data-date'));
-});
-// モバイル: ティッカーに触れている間はスクロールを一時停止し、狙ったタイトルをタップしやすくする
-let _kwTouchResume;
-document.addEventListener('touchstart', function(e){
-  const mq=e.target.closest&&e.target.closest('.kw-marquee');
-  if(!mq)return;
-  clearTimeout(_kwTouchResume);
-  const tr=mq.querySelector('.kw-track');
-  if(tr)tr.style.animationPlayState='paused';
-},{passive:true});
-document.addEventListener('touchend', function(){
-  clearTimeout(_kwTouchResume);
-  _kwTouchResume=setTimeout(function(){
-    document.querySelectorAll('.kw-track').forEach(function(tr){tr.style.animationPlayState='';});
-  },2500);
-},{passive:true});
-
 // v20260604000000
 (async()=>{
   loadLikedSet();
@@ -1505,10 +1656,8 @@ document.addEventListener('touchend', function(){
     fetchDailyLinks().catch(e=>console.error('fetchDailyLinks error:',e)),
     loadAll().catch(e=>console.error('loadAll error:',e)),
   ]);
-  // 全フェッチ完了後、最新の allDailyLinks でダッシュボードボタンを確定描画
-  if (curDate) renderDailyLinks(curDate);
-  // グッド・メモ数は loadAll と並行取得のため、確定後にランキングを再描画
-  if (typeof renderRankings === 'function') renderRankings();
+  // 全フェッチ完了後に再描画（グッド数が揃った状態で反映。日曜は週間グッド順を確定）
+  if (curDate) loadDate(curDate);
   // 成功・失敗にかかわらず必ずローディングを非表示
   const ld=document.getElementById('loading');
   ld.classList.add('out');
