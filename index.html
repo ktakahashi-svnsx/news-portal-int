@@ -9,8 +9,12 @@
 <title>【社内版】光学ビジネス ニュースポータル</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://docs.google.com">
+<link rel="preconnect" href="https://script.google.com">
+<!-- 日本語フォントは1ウェイトあたり約270KB。300/500は未使用のため削除（1.08MB→約540KB） -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--red:#dc2626;--red-lt:#fef2f2;--purple:#7c3aed;--green:#059669;--blue:#2563eb;--bg:#f1f3f6;--white:#fff;--border:#e2e5ea;--text:#111827;--muted:#6b7280;--side:210px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -767,6 +771,52 @@ function trackAudioPlay(dateStr) {
 const LS_NOTE_AUTHOR_KEY = 'np_note_author_v1';
 let _noteCountsCache = {};  // {article_url: count}
 
+// ── 統合初期化エンドポイント ────────────────────────────────────
+// Apps Script のウェブアプリは「同一ユーザーからの同時リクエストを直列実行」する。
+// 従来は likes / notes_count / daily_links / pageview の4本を同時に投げていたため、
+// 1本2.3秒の処理が待ち行列で最大31秒まで膨らんでいた。
+// → GET 1本（type=init）にまとめ、pageview は描画完了後に送る。
+const SS_INIT_CACHE_KEY = 'np_init_v1';
+const SS_INIT_CACHE_MS  = 60 * 1000;
+
+function applyInitData(d){
+  d = d || {};
+  if (d.likes)        likeCounts       = d.likes;
+  if (d.notes_count)  _noteCountsCache = d.notes_count;
+  if (d.daily_links){ allDailyLinks    = d.daily_links; if (curDate) renderDailyLinks(curDate); }
+}
+
+async function fetchInit() {
+  if (!ANALYTICS_ENDPOINT) return;
+  // セッションキャッシュ
+  try{
+    const hit = sessionStorage.getItem(SS_INIT_CACHE_KEY);
+    if (hit){
+      const o = JSON.parse(hit);
+      if (Date.now() - o.t < SS_INIT_CACHE_MS){ applyInitData(o.v); return; }
+    }
+  }catch(e){}
+
+  try {
+    const res = await fetch(ANALYTICS_ENDPOINT + '?type=init&audience=' + encodeURIComponent(AUDIENCE));
+    const j = await res.json();
+    if (j && j.ok && j.data) {
+      applyInitData(j.data);
+      try{ sessionStorage.setItem(SS_INIT_CACHE_KEY, JSON.stringify({t:Date.now(), v:j.data})); }catch(e){}
+      return;
+    }
+    throw new Error('init not available');
+  } catch(e) {
+    // Apps Script 側が未更新の場合のフォールバック。
+    // 必ず「直列」で実行すること（並列にすると待ち行列で数十秒かかる）。
+    console.warn('fetchInit fallback:', e && e.message);
+    await fetchLikeCounts().catch(()=>{});
+    await fetchNoteCounts().catch(()=>{});
+    await fetchDailyLinks().catch(()=>{});
+  }
+}
+// ─────────────────────────────────────────────────────────────────
+
 async function fetchNoteCounts() {
   if (!ANALYTICS_ENDPOINT) return;
   try {
@@ -1021,10 +1071,20 @@ function csvLine(l){
   f.push(c);return f.map(s=>s.trim());
 }
 
+const SS_SHEET_CACHE_MS = 60 * 1000;   // 同一セッション内は60秒キャッシュ
 async function fetchSheet(name){
-  // cache:'no-store'はCORSプリフライトを引き起こすため除去
-  // タイムスタンプパラメータでブラウザキャッシュを回避
-  const url=`${BASE}&sheet=${encodeURIComponent(name)}&_=${Date.now()}`;
+  // ① セッションキャッシュ（タブ内の再読み込み・再訪が即座になる）
+  const ck='np_sheet_v1:'+name;
+  try{
+    const hit=sessionStorage.getItem(ck);
+    if(hit){
+      const o=JSON.parse(hit);
+      if(Date.now()-o.t < SS_SHEET_CACHE_MS) return o.v;
+    }
+  }catch(e){}
+  // ② キャッシュバスターを「1分粒度」にする（毎回別URLだとブラウザキャッシュが一切効かない）
+  const bust=Math.floor(Date.now()/SS_SHEET_CACHE_MS);
+  const url=`${BASE}&sheet=${encodeURIComponent(name)}&_=${bust}`;
   // タイムアウト付きfetch（10秒）
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),10000);
@@ -1040,6 +1100,7 @@ async function fetchSheet(name){
   if(!r.ok)throw new Error(`HTTP ${r.status}`);
   const t=await r.text();
   if(t.trim().startsWith('<!'))throw new Error('スプレッドシートの共有設定を確認してください');
+  try{ sessionStorage.setItem(ck, JSON.stringify({t:Date.now(), v:t})); }catch(e){}
   return t;
 }
 
@@ -1884,10 +1945,15 @@ function buildWaPlayer(fileId, rawUrl, prefix){
     const previewUrl='https://drive.google.com/file/d/'+fileId+'/preview';
     const driveUrl='https://drive.google.com/file/d/'+fileId+'/view';
     const iframe=document.createElement('iframe');
-    iframe.src=previewUrl;
+    // Drive の preview は読み込みに4秒以上かかるため、初期描画の帯域を奪わないよう遅延させる
+    iframe.loading='lazy';
+    iframe.dataset.src=previewUrl;
     iframe.allow='autoplay';
     iframe.style.cssText='width:100%;height:72px;border:none;border-radius:8px;display:block;background:#f5f0ff;margin-bottom:6px;';
     wrap.appendChild(iframe);
+    (window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>{
+      if(!iframe.getAttribute('src')) iframe.src=iframe.dataset.src;
+    });
     const lnk=document.createElement('a');
     lnk.className='adrive-link';
     lnk.href=driveUrl;
@@ -1987,8 +2053,7 @@ function closeCalModal(e){
   document.body.style.overflow='';
 }
 document.addEventListener('DOMContentLoaded',function(){
-  // アクセス解析: ページ読み込み時に1回だけ送信
-  trackPageview();
+  // アクセス解析の初回送信は起動シーケンスの最後（描画完了後）に移動した
   // タブが30分以上非アクティブだった後に戻ってきたら、新セッションとして再送信
   document.addEventListener('visibilitychange',function(){
     if(document.visibilityState==='visible'){
@@ -2213,12 +2278,10 @@ document.addEventListener('click', function(e) {
 (async()=>{
   loadLikedSet();
   initCal();
-  // 全フェッチを並列実行（fetchLikeCounts / fetchNoteCounts / fetchDailyLinks / loadAll）
+  // スプレッドシート(gviz・並列OK) と Apps Script(1本に統合) を並列取得
   await Promise.allSettled([
-    fetchLikeCounts().catch(e=>console.error('fetchLikeCounts error:',e)),
-    fetchNoteCounts().catch(e=>console.error('fetchNoteCounts error:',e)),
-    fetchDailyLinks().catch(e=>console.error('fetchDailyLinks error:',e)),
     loadAll().catch(e=>console.error('loadAll error:',e)),
+    fetchInit().catch(e=>console.error('fetchInit error:',e)),
   ]);
   // 全フェッチ完了後に再描画（グッド数が揃った状態で反映。土曜は週間グッド順を確定）
   if (curDate) loadDate(curDate);
@@ -2228,6 +2291,11 @@ document.addEventListener('click', function(e) {
   ld.style.opacity='0';
   ld.style.pointerEvents='none';
   setTimeout(()=>{ld.style.display='none';},600);
+  // アクセス解析は描画完了後に送信する。
+  // 初期ロード中に送ると Apps Script の待ち行列に割り込み、
+  // likes / notes / daily_links の応答を10秒以上遅らせてしまう。
+  const _idle = window.requestIdleCallback || (f=>setTimeout(f,800));
+  _idle(()=>{ trackPageview(); });
 })();
 </script>
 
