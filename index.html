@@ -451,13 +451,13 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
   .hdr-external-link{padding:4px 7px}
   .hdr-live-lbl{display:none}
 }
-/* メモボタン */
+/* コメントボタン */
 .note-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);background:none;border:1.5px solid var(--border);border-radius:20px;padding:4px 12px;cursor:pointer;transition:all .15s;user-select:none;font-family:inherit;margin-right:6px}
 .note-btn:hover{border-color:#7c3aed;color:#7c3aed;background:rgba(124,58,237,.05)}
 .note-ico{font-size:13px}
 .note-count{font-size:11px;font-weight:700;min-width:9px;text-align:center}
 .note-count:empty{display:none}
-/* メモモーダル */
+/* コメントモーダル */
 .note-modal{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);align-items:center;justify-content:center;padding:20px}
 .note-modal.open{display:flex}
 .note-modal-inner{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;display:flex;flex-direction:column;animation:noteIn .2s}
@@ -767,7 +767,7 @@ function trackAudioPlay(dateStr) {
   }
 }
 
-// ── 社内メモ機能 ──────────────────────────────────────────────────
+// ── 社内コメント機能 ──────────────────────────────────────────────────
 const LS_NOTE_AUTHOR_KEY = 'np_note_author_v1';
 let _noteCountsCache = {};  // {article_url: count}
 
@@ -776,8 +776,11 @@ let _noteCountsCache = {};  // {article_url: count}
 // 従来は likes / notes_count / daily_links / pageview の4本を同時に投げていたため、
 // 1本2.3秒の処理が待ち行列で最大31秒まで膨らんでいた。
 // → GET 1本（type=init）にまとめ、pageview は描画完了後に送る。
-const SS_INIT_CACHE_KEY = 'np_init_v1';
-const SS_INIT_CACHE_MS  = 60 * 1000;
+// Apps Script(script.google.com) は「同一ユーザーの同時リクエストを直列実行」し、
+// 1リクエストあたり2〜45秒かかることが実測で判明した。
+// likes / notes / daily_links はいずれも同じスプレッドシート上のシートなので、
+// 他のシートと同じ gviz(docs.google.com) 経由で読む。実測 8シート並列で 519ms。
+// → 初期表示から Apps Script を完全に排除する（GASは書き込み専用にする）。
 
 function applyInitData(d){
   d = d || {};
@@ -787,33 +790,43 @@ function applyInitData(d){
 }
 
 async function fetchInit() {
-  if (!ANALYTICS_ENDPOINT) return;
-  // セッションキャッシュ
-  try{
-    const hit = sessionStorage.getItem(SS_INIT_CACHE_KEY);
-    if (hit){
-      const o = JSON.parse(hit);
-      if (Date.now() - o.t < SS_INIT_CACHE_MS){ applyInitData(o.v); return; }
-    }
-  }catch(e){}
+  const [likesR, notesR, linksR] = await Promise.allSettled([
+    fetchSheet('likes_' + AUDIENCE),
+    fetchSheet('notes_' + AUDIENCE),
+    fetchSheet('daily_links'),
+  ]);
 
-  try {
-    const res = await fetch(ANALYTICS_ENDPOINT + '?type=init&audience=' + encodeURIComponent(AUDIENCE));
-    const j = await res.json();
-    if (j && j.ok && j.data) {
-      applyInitData(j.data);
-      try{ sessionStorage.setItem(SS_INIT_CACHE_KEY, JSON.stringify({t:Date.now(), v:j.data})); }catch(e){}
-      return;
-    }
-    throw new Error('init not available');
-  } catch(e) {
-    // Apps Script 側が未更新の場合のフォールバック。
-    // 必ず「直列」で実行すること（並列にすると待ち行列で数十秒かかる）。
-    console.warn('fetchInit fallback:', e && e.message);
-    await fetchLikeCounts().catch(()=>{});
-    await fetchNoteCounts().catch(()=>{});
-    await fetchDailyLinks().catch(()=>{});
-  }
+  // likes_<audience>: url, count, last_updated
+  if (likesR.status === 'fulfilled') {
+    const m = {};
+    parseCSVRaw(likesR.value).forEach(r => {
+      const u = (r.url || '').trim();
+      if (u) m[u] = Number(r.count) || 0;
+    });
+    likeCounts = m;
+  } else { console.warn('likes fetch failed:', likesR.reason && likesR.reason.message); }
+
+  // notes_<audience>: note_id, date, article_url, author, body, created_at → URLごとの件数
+  if (notesR.status === 'fulfilled') {
+    const m = {};
+    parseCSVRaw(notesR.value).forEach(r => {
+      const u = (r.article_url || '').trim();
+      if (u) m[u] = (m[u] || 0) + 1;
+    });
+    _noteCountsCache = m;
+  } else { console.warn('notes fetch failed:', notesR.reason && notesR.reason.message); }
+
+  // daily_links: date, dashboard_url
+  if (linksR.status === 'fulfilled') {
+    const m = {};
+    parseCSVRaw(linksR.value).forEach(r => {
+      const d = (r.date || '').trim();
+      const u = (r.dashboard_url || '').trim();
+      if (d && u) m[d] = { dashboard_url: u };
+    });
+    allDailyLinks = m;
+    if (curDate) renderDailyLinks(curDate);
+  } else { console.warn('daily_links fetch failed:', linksR.reason && linksR.reason.message); }
 }
 // ─────────────────────────────────────────────────────────────────
 
@@ -864,12 +877,23 @@ function setNoteAuthor(name) {
   try { localStorage.setItem(LS_NOTE_AUTHOR_KEY, name); } catch(e) {}
 }
 
+// コメント一覧も gviz から読む（Apps Script 経由だと2〜45秒かかるため）。
+// 投稿直後の1件は submitNote() が楽観的に描画するので、多少の反映遅れは問題にならない。
 async function fetchNotes(articleUrl) {
-  if (!ANALYTICS_ENDPOINT || !articleUrl) return [];
+  if (!articleUrl) return [];
   try {
-    const res = await fetch(ANALYTICS_ENDPOINT + '?type=notes&article_url=' + encodeURIComponent(articleUrl));
-    const j = await res.json();
-    return (j.ok && Array.isArray(j.data)) ? j.data : [];
+    const url = `${BASE}&sheet=${encodeURIComponent('notes_' + AUDIENCE)}&_=${Date.now()}`;
+    const res = await fetch(url);
+    const t = await res.text();
+    if (t.trim().startsWith('<!')) throw new Error('シートの共有設定を確認してください');
+    const out = parseCSVRaw(t)
+      .filter(r => (r.article_url || '').trim() === articleUrl)
+      .map(r => ({
+        note_id: r.note_id || '', date: r.date || '', article_url: r.article_url || '',
+        author: r.author || '', body: r.body || '', created_at: r.created_at || ''
+      }));
+    out.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    return out;
   } catch(e) {
     console.warn('fetchNotes failed:', e);
     return [];
@@ -906,7 +930,7 @@ async function openNoteModal(articleUrl) {
   if (authorInput && !authorInput.value) authorInput.value = getNoteAuthor();
   modal.classList.add('open');
   document.body.style.overflow='hidden';
-  // メモ一覧を取得
+  // コメント一覧を取得
   const notes = await fetchNotes(articleUrl);
   renderNoteList(notes);
 }
@@ -915,7 +939,7 @@ function renderNoteList(notes) {
   const list = document.getElementById('noteList');
   if (!list) return;
   if (!notes || notes.length === 0) {
-    list.innerHTML = '<div class="note-empty">まだメモはありません。最初のメモを投稿してみましょう。</div>';
+    list.innerHTML = '<div class="note-empty">まだコメントはありません。最初のコメントを投稿してみましょう。</div>';
     return;
   }
   list.innerHTML = notes.map(function(n){
@@ -944,7 +968,7 @@ async function submitNote() {
   const bodyInput = document.getElementById('noteBody');
   const author = (authorInput.value || '').trim();
   const body = (bodyInput.value || '').trim();
-  if (!body) { alert('メモ本文を入力してください'); return; }
+  if (!body) { alert('コメント本文を入力してください'); return; }
   if (author) setNoteAuthor(author);
   // 送信（no-corsなのでレスポンスは見えない）
   postNote(articleUrl, author, body);
@@ -968,7 +992,7 @@ async function submitNote() {
   list.insertAdjacentHTML('afterbegin', html);
   // カウント増分（次回ロードで正しい値に）
   _noteCountsCache[articleUrl] = (_noteCountsCache[articleUrl] || 0) + 1;
-  // 該当記事カードのメモバッジを更新
+  // 該当記事カードのコメントバッジを更新
   refreshNoteBadges(articleUrl);
 }
 
@@ -989,7 +1013,7 @@ function buildNoteFooter(rawUrl) {
   return '<button class="note-btn" data-note-url="'+safeAttr+'">' +
          '<span class="note-ico">💬</span>' +
          '<span class="note-count">'+(cnt>0?cnt:'')+'</span>' +
-         '<span>メモ</span></button>';
+         '<span>コメント</span></button>';
 }
 // ── グッドボタン ──────────────────────────────────────────────────
 // ▼ Apps ScriptデプロイURLを設定するとスプレッドシートにも記録されます
@@ -1057,6 +1081,17 @@ function parseCSV(text){
     hdr.forEach((h,i)=>{o[h]=(f[i]||'').trim();});
     return o;
   }).filter(r=>r.date&&/^\d{4}-\d{2}-\d{2}$/.test(r.date));
+}
+// date列を持たないシート（likes_int 等）用の汎用パーサ
+function parseCSVRaw(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const hdr=csvLine(lines[0]);
+  return lines.slice(1).map(l=>{
+    const f=csvLine(l),o={};
+    hdr.forEach((h,i)=>{o[h]=(f[i]||'').trim();});
+    return o;
+  });
 }
 function csvLine(l){
   const f=[];let c='',q=false;
@@ -2058,8 +2093,11 @@ document.addEventListener('DOMContentLoaded',function(){
   document.addEventListener('visibilitychange',function(){
     if(document.visibilityState==='visible'){
       try{
+        // 初回表示時は last が未設定。ここで !last を真としてしまうと
+        // 読み込み中に visibilitychange が起きただけで PV が二重送信され、
+        // Apps Script の待ち行列に割り込んで初期表示を数秒遅らせていた。
         const last=parseInt(sessionStorage.getItem(SS_SESSION_LAST_KEY)||'0',10);
-        if(!last||(Date.now()-last)>SESSION_TIMEOUT_MS){
+        if(last && (Date.now()-last)>SESSION_TIMEOUT_MS){
           trackPageview();
         }
       }catch(e){}
@@ -2266,7 +2304,7 @@ document.addEventListener('click', function(e) {
     if (url) toggleLike(url, likeBtn);
     return;
   }
-  // メモボタン
+  // コメントボタン
   const noteBtn = e.target.closest('.note-btn[data-note-url]');
   if (noteBtn) {
     const url = noteBtn.getAttribute('data-note-url');
@@ -2295,7 +2333,7 @@ document.addEventListener('click', function(e) {
   // 初期ロード中に送ると Apps Script の待ち行列に割り込み、
   // likes / notes / daily_links の応答を10秒以上遅らせてしまう。
   const _idle = window.requestIdleCallback || (f=>setTimeout(f,800));
-  _idle(()=>{ trackPageview(); });
+  _idle(()=>{ trackPageview(); }, { timeout: 3000 });
 })();
 </script>
 
@@ -2327,11 +2365,11 @@ document.addEventListener('click', function(e) {
   </div>
 </div>
 
-<!-- ── 社内メモモーダル ── -->
+<!-- ── 社内コメントモーダル ── -->
 <div class="note-modal" id="noteModal" onclick="closeNoteModal(event)">
   <div class="note-modal-inner" onclick="event.stopPropagation()">
     <div class="note-modal-hd">
-      <span class="note-modal-ttl">💬 社内メモ</span>
+      <span class="note-modal-ttl">💬 社内コメント</span>
       <button class="note-modal-close" onclick="closeNoteModal()" title="閉じる">✕</button>
     </div>
     <div class="note-article">
@@ -2343,9 +2381,9 @@ document.addEventListener('click', function(e) {
         <input class="note-input" id="noteAuthor" type="text" placeholder="お名前（任意）" maxlength="32">
       </div>
       <div class="note-form-row">
-        <textarea class="note-textarea" id="noteBody" placeholder="メモを入力（社内のみ閲覧）" maxlength="2000"></textarea>
+        <textarea class="note-textarea" id="noteBody" placeholder="コメントを入力（社内のみ閲覧）" maxlength="2000"></textarea>
       </div>
-      <button class="note-submit" onclick="submitNote()">📝 メモを投稿</button>
+      <button class="note-submit" onclick="submitNote()">📝 コメントを投稿</button>
     </div>
   </div>
 </div>
