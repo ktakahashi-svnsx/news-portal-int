@@ -1613,16 +1613,46 @@ function _qzRoundRect(c,x,y,w,h,r){
 }
 // 正解＝緑の丸／不正解＝赤のバツ。絵文字はOSごとの差が大きいのでベクタで描く
 function _qzMark(c,x,y,ok){
-  c.save();c.lineWidth=5;c.lineCap='round';
+  c.save();c.lineWidth=4;c.lineCap='round';
   if(ok){
     c.strokeStyle='#059669';
-    c.beginPath();c.arc(x,y,21,0,Math.PI*2);c.stroke();
+    c.beginPath();c.arc(x,y,15,0,Math.PI*2);c.stroke();
   }else{
-    c.strokeStyle='#dc2626';const d=16;
+    c.strokeStyle='#dc2626';const d=12;
     c.beginPath();c.moveTo(x-d,y-d);c.lineTo(x+d,y+d);c.stroke();
     c.beginPath();c.moveTo(x+d,y-d);c.lineTo(x-d,y+d);c.stroke();
   }
   c.restore();
+}
+
+// 設問の「何に関するクイズか」を1行で表す概要を作る。
+// source_title 例:「Lumilens、ステルスを脱し7億ドル超を調達—評価額55.1億ドル…（optics.org、2026年8月11日）」
+//   → 末尾の出典カッコを落とし、「—」以降（補足）を切って見出しの核だけ残す
+function _qzTopic(q){
+  let t=String(q.source_title||'').trim();
+  if(!t)t=String(q.question||'').trim();          // source_title 未設定なら設問文で代用
+  t=t.replace(/（[^（）]*）\s*$/,'').replace(/\([^()]*\)\s*$/,'').trim();
+  const i=t.search(/[—―–]/);
+  if(i>8)t=t.slice(0,i).trim();
+  return t.replace(/[、。]\s*$/,'');
+}
+
+// canvas には自動折り返しが無いので1文字ずつ measureText して行に割る
+function _qzWrap(c,text,maxW,maxLines){
+  const out=[];let cur='';
+  for(const ch of text){
+    if(c.measureText(cur+ch).width>maxW){
+      if(out.length===maxLines-1){
+        let s=cur;
+        while(s&&c.measureText(s+'…').width>maxW)s=s.slice(0,-1);
+        out.push(s+'…');
+        return out;
+      }
+      out.push(cur);cur=ch;
+    }else cur+=ch;
+  }
+  if(cur)out.push(cur);
+  return out.length?out:[''];
 }
 
 async function buildQuizResultCanvas(){
@@ -1640,7 +1670,14 @@ async function buildQuizResultCanvas(){
     await document.fonts.ready;
   }catch(e){}
 
-  const S=2,W=760,PAD=40,H=660;          // S=2 で Retina 相当（出力 1520×1320）
+  const S=2,W=760,PAD=40,ROW0=448,TXTW=W-PAD*2-4;
+  // 概要は最大2行。行数に応じて各行の高さとキャンバス全体の高さを決める
+  const meas=document.createElement('canvas').getContext('2d');
+  meas.font='400 15px '+QZ_IMG_FONT;
+  const lines =st.questions.map(q=>_qzWrap(meas,_qzTopic(q),TXTW,2));
+  const rowH  =lines.map(l=>34+l.length*23+14);
+  const H=ROW0+rowH.reduce((a,b)=>a+b,0)+58;
+
   const cv=document.createElement('canvas');
   cv.width=W*S;cv.height=H*S;
   const c=cv.getContext('2d');
@@ -1659,8 +1696,8 @@ async function buildQuizResultCanvas(){
 
   // タイトル・絵文字
   c.textAlign='center';c.fillStyle='#111827';c.font='700 29px '+QZ_IMG_FONT;
-  c.fillText('今週のニュースクイズ',W/2,165);
-  c.font='58px '+QZ_IMG_EMOJI;c.fillText(emoji,W/2,258);
+  c.fillText('今週のニュースクイズ',W/2,163);
+  c.font='54px '+QZ_IMG_EMOJI;c.fillText(emoji,W/2,252);
 
   // スコア（文字サイズが異なるので手動で中央寄せ）
   const parts=[
@@ -1670,31 +1707,42 @@ async function buildQuizResultCanvas(){
   ];
   let tot=0;parts.forEach(pt=>{c.font=pt.f;tot+=c.measureText(pt.t).width;});
   c.textAlign='left';let x=(W-tot)/2;
-  parts.forEach(pt=>{c.font=pt.f;c.fillStyle=pt.col;c.fillText(pt.t,x,335);x+=c.measureText(pt.t).width;});
+  parts.forEach(pt=>{c.font=pt.f;c.fillStyle=pt.col;c.fillText(pt.t,x,330);x+=c.measureText(pt.t).width;});
 
   c.textAlign='center';c.font='400 17px '+QZ_IMG_FONT;c.fillStyle='#4338ca';
-  c.fillText(msg,W/2,378);
+  c.fillText(msg,W/2,372);
 
   c.strokeStyle='#e2e5ea';c.lineWidth=1;
-  c.beginPath();c.moveTo(PAD,414.5);c.lineTo(W-PAD,414.5);c.stroke();
+  c.beginPath();c.moveTo(PAD,408.5);c.lineTo(W-PAD,408.5);c.stroke();
 
-  // 各問の正誤（Q番号 → マーク → ジャンル）
-  const colW=(W-PAD*2)/n;
+  // 各問: 1行目に Q番号／ジャンル／正誤マーク、2行目以降に概要
+  let y=ROW0;
   st.questions.forEach((q,i)=>{
-    const cx=PAD+colW*(i+0.5), isPol=q.category==='pol';
-    c.textAlign='center';c.fillStyle='#6b7280';c.font='700 15px '+QZ_IMG_FONT;
-    c.fillText('Q'+(i+1),cx,470);
-    _qzMark(c,cx,516,st.answers[i]===q.answer);
-    const cw=isPol?84:60,ch=25,cy0=558;
+    const isPol=q.category==='pol';
+    c.textAlign='left';c.fillStyle='#3730a3';c.font='700 17px '+QZ_IMG_FONT;
+    c.fillText('Q'+(i+1),PAD+2,y+23);
+
+    const cw=isPol?82:58,ch=23,cx0=PAD+44;
     c.fillStyle  =isPol?'#dcfce7':'#fee2e2';
     c.strokeStyle=isPol?'#86efac':'#fca5a5';c.lineWidth=1;
-    _qzRoundRect(c,cx-cw/2,cy0,cw,ch,12.5);c.fill();c.stroke();
+    _qzRoundRect(c,cx0,y+5,cw,ch,11.5);c.fill();c.stroke();
     c.fillStyle=isPol?'#15803d':'#b91c1c';c.font='700 12px '+QZ_IMG_FONT;
-    c.fillText(isPol?'政治・安保':'技術',cx,cy0+17);
+    c.textAlign='center';c.fillText(isPol?'政治・安保':'技術',cx0+cw/2,y+21);
+
+    _qzMark(c,W-PAD-16,y+17,st.answers[i]===q.answer);
+
+    c.textAlign='left';c.fillStyle='#374151';c.font='400 15px '+QZ_IMG_FONT;
+    lines[i].forEach((ln,li)=>c.fillText(ln,PAD+2,y+52+li*23));
+
+    y+=rowH[i];
+    if(i<n-1){
+      c.strokeStyle='#f1f3f6';c.lineWidth=1;
+      c.beginPath();c.moveTo(PAD,y-0.5);c.lineTo(W-PAD,y-0.5);c.stroke();
+    }
   });
 
-  c.fillStyle='#9ca3af';c.font='400 13px '+QZ_IMG_FONT;
-  c.fillText('光学ビジネス ニュースポータル ｜ 社内版',W/2,H-26);
+  c.textAlign='center';c.fillStyle='#9ca3af';c.font='400 13px '+QZ_IMG_FONT;
+  c.fillText('光学ビジネス ニュースポータル ｜ 社内版',W/2,H-24);
 
   return cv;
 }
