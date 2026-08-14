@@ -248,6 +248,11 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
 .qz-msg{font-size:13px;color:#4338ca;margin-top:5px}
 .qz-retry{margin-top:13px;background:#4338ca;color:#fff;border:none;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s}
 .qz-retry:hover{background:#3730a3}
+.qz-actions{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:13px}
+.qz-actions .qz-retry{margin-top:0}
+.qz-save{background:#fff;color:#4338ca;border:1.5px solid #a5b4fc;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s}
+.qz-save:hover{background:#eef2ff}
+.qz-save:disabled{opacity:.55;cursor:default}
 /* ── 週間ビューのカード内バッジ（順位・グッド数・掲載日） ── */
 .nrank{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:18px;padding:0 5px;border-radius:9px;font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;background:#eef0f4;color:#6b7280;flex-shrink:0}
 .nrank.r1{background:#fde68a;color:#92400e}.nrank.r2{background:#e5e7eb;color:#4b5563}.nrank.r3{background:#fed7aa;color:#9a3412}
@@ -1597,6 +1602,125 @@ function _startPendingCountdown(ds){
 }
 
 // クイズ画面の描画
+// ── クイズ結果を画像（PNG）で保存 ──────────────────────────────────
+const QZ_IMG_FONT  = '"Noto Sans JP", system-ui, sans-serif';
+const QZ_IMG_EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
+function _qzRoundRect(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();
+}
+// 正解＝緑の丸／不正解＝赤のバツ。絵文字はOSごとの差が大きいのでベクタで描く
+function _qzMark(c,x,y,ok){
+  c.save();c.lineWidth=5;c.lineCap='round';
+  if(ok){
+    c.strokeStyle='#059669';
+    c.beginPath();c.arc(x,y,21,0,Math.PI*2);c.stroke();
+  }else{
+    c.strokeStyle='#dc2626';const d=16;
+    c.beginPath();c.moveTo(x-d,y-d);c.lineTo(x+d,y+d);c.stroke();
+    c.beginPath();c.moveTo(x+d,y-d);c.lineTo(x-d,y+d);c.stroke();
+  }
+  c.restore();
+}
+
+async function buildQuizResultCanvas(){
+  const st=_quizState;
+  if(!st||!st.questions.length)return null;
+  const n=st.questions.length;
+  const score=st.answers.reduce((s,a,i)=>s+(a===st.questions[i].answer?1:0),0);
+  const emoji=score===n?'🎉':score>=Math.ceil(n*0.6)?'👏':'💪';
+  const msg=score===n?'全問正解！素晴らしい！':score>=Math.ceil(n*0.6)?'よくできました！':'来週リベンジしましょう！';
+
+  // Webフォントの読み込みを待たないと游ゴシック等にフォールバックしてしまう
+  try{
+    await document.fonts.load('700 30px "Noto Sans JP"');
+    await document.fonts.load('400 16px "Noto Sans JP"');
+    await document.fonts.ready;
+  }catch(e){}
+
+  const S=2,W=760,PAD=40,H=660;          // S=2 で Retina 相当（出力 1520×1320）
+  const cv=document.createElement('canvas');
+  cv.width=W*S;cv.height=H*S;
+  const c=cv.getContext('2d');
+  c.scale(S,S);c.textBaseline='alphabetic';
+
+  c.fillStyle='#ffffff';c.fillRect(0,0,W,H);
+
+  // ヘッダ帯
+  const g=c.createLinearGradient(0,0,W,104);
+  g.addColorStop(0,'#4338ca');g.addColorStop(1,'#7c3aed');
+  c.fillStyle=g;c.fillRect(0,0,W,104);
+  c.fillStyle='#ffffff';c.font='700 26px '+QZ_IMG_FONT;c.textAlign='left';
+  c.fillText('sevensix',PAD,62);
+  c.font='400 15px '+QZ_IMG_FONT;c.fillStyle='rgba(255,255,255,.88)';c.textAlign='right';
+  c.fillText(_mmdd(st.start)+' 〜 '+_mmdd(st.end),W-PAD,62);
+
+  // タイトル・絵文字
+  c.textAlign='center';c.fillStyle='#111827';c.font='700 29px '+QZ_IMG_FONT;
+  c.fillText('今週のニュースクイズ',W/2,165);
+  c.font='58px '+QZ_IMG_EMOJI;c.fillText(emoji,W/2,258);
+
+  // スコア（文字サイズが異なるので手動で中央寄せ）
+  const parts=[
+    {t:n+'問中 ', f:'700 30px '+QZ_IMG_FONT, col:'#3730a3'},
+    {t:score+'問',f:'800 46px '+QZ_IMG_FONT, col:score===n?'#059669':'#4338ca'},
+    {t:' 正解！', f:'700 30px '+QZ_IMG_FONT, col:'#3730a3'},
+  ];
+  let tot=0;parts.forEach(pt=>{c.font=pt.f;tot+=c.measureText(pt.t).width;});
+  c.textAlign='left';let x=(W-tot)/2;
+  parts.forEach(pt=>{c.font=pt.f;c.fillStyle=pt.col;c.fillText(pt.t,x,335);x+=c.measureText(pt.t).width;});
+
+  c.textAlign='center';c.font='400 17px '+QZ_IMG_FONT;c.fillStyle='#4338ca';
+  c.fillText(msg,W/2,378);
+
+  c.strokeStyle='#e2e5ea';c.lineWidth=1;
+  c.beginPath();c.moveTo(PAD,414.5);c.lineTo(W-PAD,414.5);c.stroke();
+
+  // 各問の正誤（Q番号 → マーク → ジャンル）
+  const colW=(W-PAD*2)/n;
+  st.questions.forEach((q,i)=>{
+    const cx=PAD+colW*(i+0.5), isPol=q.category==='pol';
+    c.textAlign='center';c.fillStyle='#6b7280';c.font='700 15px '+QZ_IMG_FONT;
+    c.fillText('Q'+(i+1),cx,470);
+    _qzMark(c,cx,516,st.answers[i]===q.answer);
+    const cw=isPol?84:60,ch=25,cy0=558;
+    c.fillStyle  =isPol?'#dcfce7':'#fee2e2';
+    c.strokeStyle=isPol?'#86efac':'#fca5a5';c.lineWidth=1;
+    _qzRoundRect(c,cx-cw/2,cy0,cw,ch,12.5);c.fill();c.stroke();
+    c.fillStyle=isPol?'#15803d':'#b91c1c';c.font='700 12px '+QZ_IMG_FONT;
+    c.fillText(isPol?'政治・安保':'技術',cx,cy0+17);
+  });
+
+  c.fillStyle='#9ca3af';c.font='400 13px '+QZ_IMG_FONT;
+  c.fillText('光学ビジネス ニュースポータル ｜ 社内版',W/2,H-26);
+
+  return cv;
+}
+
+async function saveQuizResultImage(btn){
+  const label=btn?btn.textContent:'';
+  try{
+    if(btn){btn.disabled=true;btn.textContent='画像を作成中…';}
+    const cv=await buildQuizResultCanvas();
+    if(!cv)throw new Error('canvas build failed');
+    const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+    if(!blob)throw new Error('toBlob failed');
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='sevensix_newsquiz_'+(_quizState?_quizState.ds:'')+'.png';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    if(btn){btn.textContent='✓ 保存しました';setTimeout(()=>{btn.textContent=label;btn.disabled=false;},2000);}
+  }catch(e){
+    console.error('saveQuizResultImage failed',e);
+    if(btn){btn.textContent=label;btn.disabled=false;}
+    alert('画像の保存に失敗しました。ブラウザを最新版に更新してお試しください。');
+  }
+}
+
 function renderQuizBlock(grid){
   grid.className='quiz-flow';
   const st=_quizState;
@@ -1657,8 +1781,14 @@ function renderQuizBlock(grid){
     const emoji=score===n?'🎉':score>=Math.ceil(n*0.6)?'👏':'💪';
     const msg=score===n?'全問正解！素晴らしい！':score>=Math.ceil(n*0.6)?'よくできました！':'来週リベンジしましょう！';
     const res=document.createElement('div');res.className='qz-result';
-    res.innerHTML=`<div class="qz-score">${emoji} ${n}問中 <b>${score}問</b> 正解！</div><div class="qz-msg">${msg}</div><button type="button" class="qz-retry" id="qzRetry">もう一度挑戦する</button>`;
+    res.innerHTML=`<div class="qz-score">${emoji} ${n}問中 <b>${score}問</b> 正解！</div><div class="qz-msg">${msg}</div>
+      <div class="qz-actions">
+        <button type="button" class="qz-save" id="qzSave">🖼️ 結果を画像で保存</button>
+        <button type="button" class="qz-retry" id="qzRetry">もう一度挑戦する</button>
+      </div>`;
     grid.appendChild(res);
+    const sb=res.querySelector('#qzSave');
+    if(sb)sb.onclick=()=>saveQuizResultImage(sb);
     const rb=res.querySelector('#qzRetry');
     if(rb)rb.onclick=()=>{_clearQuizAnswers();renderFlow();};
   }
