@@ -2102,11 +2102,13 @@ function _weekKey(r){
   const v=String((r&&(r.week||r.date||r.month))||'').trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';
 }
-// 「先週」＝直近に完了した週の月曜日（今週の月曜の7日前）
-function _prevWeekMondayStr(){
+// 表示切替は土曜日。土曜から翌週の金曜までの7日間、直前に終了した週（月〜金）の月曜日を返す
+//  例）9/19(土)〜9/25(金) は 9/14(月) の週を表示し、9/26(土) に 9/21(月) の週へ切り替わる
+function _targetWeekMondayStr(){
   const n=new Date();
   const dow=n.getDay();                 // 0=日,1=月,…,6=土
-  const offset=(dow===0?6:dow-1)+7;     // 今週の月曜まで戻る日数 ＋7日
+  const backToSat=(dow+1)%7;            // 直近の土曜まで戻る日数（土=0,日=1,月=2,…,金=6）
+  const offset=backToSat+5;             // その土曜の5日前＝対象週の月曜日
   const d=new Date(n.getFullYear(),n.getMonth(),n.getDate()-offset);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -2128,8 +2130,8 @@ function parseWeeklyCSV(text){
   }).filter(r=>!!_weekKey(r));
 }
 function renderWeekly(){
-  // 対象週：先週（直近に完了した週の月曜）。該当行が無ければ利用可能な最新週にフォールバック
-  let target=_prevWeekMondayStr();
+  // 対象週：土曜切替で決まる直近に終了した週の月曜。該当行が無ければ利用可能な最新週にフォールバック
+  let target=_targetWeekMondayStr();
   let row=allWeeklyRows.find(r=>_weekKey(r)===target)||null;
   if(!row){
     const weeks=allWeeklyRows.map(_weekKey).filter(Boolean).sort();
