@@ -558,7 +558,7 @@ body{font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--bg);c
       </div>
     </div>
     <div>
-      <div class="sb-lbl">📄 先週サマリーレポート<span id="summaryWeekLbl"></span></div>
+      <div class="sb-lbl">📄 <span id="summaryKindPc">先週</span>サマリーレポート<span id="summaryWeekLbl"></span></div>
       <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c0">☀</div><div class="pdf-name full">光学・光アプリケーション</div></div><a class="pdf-btn off" id="sumBtnOptics" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
       <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c1">🛰</div><div class="pdf-name full">宇宙・防衛・核融合</div></div><a class="pdf-btn off" id="sumBtnSpace" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
       <div class="pdf-card"><div class="pdf-card-top"><div class="pdf-ico c2">🏛</div><div class="pdf-name full">国内政治</div></div><a class="pdf-btn off" id="sumBtnDomestic" target="_blank" rel="noopener">⬇ ダウンロード</a></div>
@@ -672,7 +672,7 @@ function _subKey(section,tag){
   }
   return OTHER_KEY[section];
 }
-let curDate=null,availDates=[],calY,calM,allRows=[],allChartRows=[],allMediaRows=[],allWeeklyRows=[],allQuizRows=[];
+let curDate=null,availDates=[],calY,calM,allRows=[],allChartRows=[],allMediaRows=[],allSummaryRows=[],allQuizRows=[];
 let allDailyLinks={};  // { 'YYYY-MM-DD': {dashboard_url}, ... }
 const CI={};
 
@@ -1147,8 +1147,8 @@ async function fetchSheet(name){
 async function loadAll(){
   const errEl=document.getElementById('connErr');
   const okEl=document.getElementById('connOk');
-  // articles / charts / media / monthly(=週次サマリー) / quiz を並列取得
-  const [articlesResult,chartsResult,mediaResult,weeklyResult,quizResult]=await Promise.allSettled([
+  // articles / charts / media / monthly(=サマリー) / quiz を並列取得
+  const [articlesResult,chartsResult,mediaResult,summaryResult,quizResult]=await Promise.allSettled([
     fetchSheet('articles'),
     fetchSheet('charts'),
     fetchSheet('media'),
@@ -1164,12 +1164,12 @@ async function loadAll(){
   }
   allChartRows=chartsResult.status==='fulfilled'?parseCSV(chartsResult.value):[];
   allMediaRows=mediaResult.status==='fulfilled'?parseCSV(mediaResult.value):[];
-  allWeeklyRows=weeklyResult.status==='fulfilled'?parseWeeklyCSV(weeklyResult.value):[];
+  allSummaryRows=summaryResult.status==='fulfilled'?parseSummaryCSV(summaryResult.value):[];
   // quizシート（date, questions_json）。シート未作成でもエラーにしない
   allQuizRows=quizResult.status==='fulfilled'?parseCSV(quizResult.value):[];
 
-  // 先週サマリーレポート（日次データとは独立して一度だけ描画）
-  renderWeekly();
+  // サマリーレポート（初期表示。日付選択時は loadDate から再描画）
+  renderSummary(curDate);
 
   // 日付リスト
   const artDates=allRows.map(r=>r.date).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d));
@@ -1855,6 +1855,8 @@ function renderQuizBlock(grid){
 
 function loadDate(ds){
   curDate=ds;
+  // サマリーレポート（選択日が 2026-09-12 以降なら週次、それ以前は月次）
+  renderSummary(ds);
   // スマホ用日付ボタンのテキストを更新
   const mbDate=document.getElementById('mbDateTxt');
   if(mbDate){
@@ -2088,29 +2090,40 @@ function renderChartsInto(container,theme,charts){
   container.appendChild(sec);
 }
 
-// ── 先週サマリーレポート（4カテゴリ）──
-// monthly シート想定列: week(週の月曜日 YYYY-MM-DD), optics_url, space_url, domestic_url, intl_url
-//  ※ 週キー列は week / date / month のいずれの見出しでも可（値が YYYY-MM-DD であること）
+// ── サマリーレポート（4カテゴリ）──
+// 2026-09-12 以降の日付＝「先週サマリー」（週次）、それ以前＝「前月サマリー」（月次）
+// monthly シート想定列: month（または week / date）, optics_url, space_url, domestic_url, intl_url
+//   値が YYYY-MM-DD（週の月曜日）なら週次行、YYYY-MM なら月次行として扱う
 const SUMMARY_DEFS=[
   {col:'optics_url',   pc:'sumBtnOptics',   mb:'mbSumOptics'},
   {col:'space_url',    pc:'sumBtnSpace',    mb:'mbSumSpace'},
   {col:'domestic_url', pc:'sumBtnDomestic', mb:'mbSumDomestic'},
   {col:'intl_url',     pc:'sumBtnIntl',     mb:'mbSumIntl'},
 ];
-// 行から週キー（YYYY-MM-DD）を取り出す
-function _weekKey(r){
+// この日付以降は週次サマリー、それより前は月次サマリーを表示
+const SUMMARY_WEEKLY_FROM='2026-09-12';
+// 行のキー（週=YYYY-MM-DD / 月=YYYY-MM）。列名は week / date / month のいずれでも可
+function _sumKey(r){
   const v=String((r&&(r.week||r.date||r.month))||'').trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';
+  return /^\d{4}-\d{2}(-\d{2})?$/.test(v)?v:'';
 }
-// 表示切替は土曜日。土曜から翌週の金曜までの7日間、直前に終了した週（月〜金）の月曜日を返す
-//  例）9/19(土)〜9/25(金) は 9/14(月) の週を表示し、9/26(土) に 9/21(月) の週へ切り替わる
-function _targetWeekMondayStr(){
-  const n=new Date();
+function _sumWeekKey(r){const k=_sumKey(r);return k.length===10?k:'';}
+function _sumMonthKey(r){const k=_sumKey(r);return k.length===7?k:'';}
+// 週の切替は土曜日。指定日から見て直前に終了した週（月〜金）の月曜日を返す
+//  例）9/19(土)〜9/25(金) は 9/14(月) の週、9/26(土) から 9/21(月) の週
+function _targetWeekMondayStr(ds){
+  const n=ds?new Date(ds+'T00:00:00'):new Date();
   const dow=n.getDay();                 // 0=日,1=月,…,6=土
-  const backToSat=(dow+1)%7;            // 直近の土曜まで戻る日数（土=0,日=1,月=2,…,金=6）
-  const offset=backToSat+5;             // その土曜の5日前＝対象週の月曜日
+  const offset=(dow+1)%7+5;             // 直近の土曜まで戻り、その5日前＝対象週の月曜日
   const d=new Date(n.getFullYear(),n.getMonth(),n.getDate()-offset);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// 指定日の前月（YYYY-MM）
+function _targetMonthStr(ds){
+  const n=ds?new Date(ds+'T00:00:00'):new Date();
+  let y=n.getFullYear(),m=n.getMonth()-1;   // getMonth()は0始まり → 前月
+  if(m<0){m=11;y-=1;}
+  return `${y}-${String(m+1).padStart(2,'0')}`;
 }
 // 月曜日キー → 「9/7〜9/11」（月〜金）の表示ラベル
 function _weekRangeLabel(monday){
@@ -2118,8 +2131,8 @@ function _weekRangeLabel(monday){
   const s=new Date(y,m-1,d), e=new Date(y,m-1,d+4);
   return `${s.getMonth()+1}/${s.getDate()}〜${e.getMonth()+1}/${e.getDate()}`;
 }
-// 週次サマリー専用CSVパーサ（date列ではなく週キー列でフィルタ）
-function parseWeeklyCSV(text){
+// サマリー専用CSVパーサ（date列ではなくキー列（週 or 月）でフィルタ）
+function parseSummaryCSV(text){
   const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split('\n').filter(l=>l.trim());
   if(lines.length<2)return[];
   const hdr=csvLine(lines[0]);
@@ -2127,17 +2140,22 @@ function parseWeeklyCSV(text){
     const f=csvLine(l),o={};
     hdr.forEach((h,i)=>{o[h]=(f[i]||'').trim();});
     return o;
-  }).filter(r=>!!_weekKey(r));
+  }).filter(r=>!!_sumKey(r));
 }
-function renderWeekly(){
-  // 対象週：土曜切替で決まる直近に終了した週の月曜。該当行が無ければ利用可能な最新週にフォールバック
-  let target=_targetWeekMondayStr();
-  let row=allWeeklyRows.find(r=>_weekKey(r)===target)||null;
+function renderSummary(ds){
+  const dateStr=(ds&&/^\d{4}-\d{2}-\d{2}$/.test(ds))?ds:_nowDateStr();
+  const weekly=dateStr>=SUMMARY_WEEKLY_FROM;
+  const keyOf=weekly?_sumWeekKey:_sumMonthKey;
+  let target=weekly?_targetWeekMondayStr(dateStr):_targetMonthStr(dateStr);
+  let row=allSummaryRows.find(r=>keyOf(r)===target)||null;
   if(!row){
-    const weeks=allWeeklyRows.map(_weekKey).filter(Boolean).sort();
-    if(weeks.length){target=weeks[weeks.length-1];row=allWeeklyRows.find(r=>_weekKey(r)===target)||null;}
+    // 該当が無ければ対象以前で最も新しい行にフォールバック
+    const keys=allSummaryRows.map(keyOf).filter(k=>k&&k<=target).sort();
+    if(keys.length){target=keys[keys.length-1];row=allSummaryRows.find(r=>keyOf(r)===target)||null;}
   }
-  const lbl=row?`（${_weekRangeLabel(target)}）`:'';
+  const kind=weekly?'先週':'前月';
+  const lbl=row?`（${weekly?_weekRangeLabel(target):target}）`:'';
+  ['summaryKindPc','summaryKindMb'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=kind;});
   const pcLbl=document.getElementById('summaryWeekLbl');if(pcLbl)pcLbl.textContent=lbl;
   const mbLbl=document.getElementById('mbSummaryWeekLbl');if(mbLbl)mbLbl.textContent=lbl;
   SUMMARY_DEFS.forEach(d=>{
@@ -2550,7 +2568,7 @@ document.addEventListener('click', function(e) {
     </button>
   </div>
   <!-- 下段：先週サマリーレポート（4カテゴリ） -->
-  <div class="mb-pdf-lbl">📄 先週サマリー<span id="mbSummaryWeekLbl"></span></div>
+  <div class="mb-pdf-lbl">📄 <span id="summaryKindMb">先週</span>サマリー<span id="mbSummaryWeekLbl"></span></div>
   <div class="mb-pdf-row">
     <a class="mb-pdf-btn c0 off" id="mbSumOptics" target="_blank" rel="noopener">☀ 光学</a>
     <a class="mb-pdf-btn c1 off" id="mbSumSpace" target="_blank" rel="noopener">🛰 宇宙・防衛</a>
